@@ -167,7 +167,7 @@ body.ready .stuck{display:none}
   <p class="small" style="margin-top:10px">Lần chạm này cũng sẽ bật âm thanh nền.</p>
   <p id="stuck" class="stuck">Nút vẫn chưa đổi thành “Vào chùa”? Có thể bạn đang mở file trong khung xem trước (Files, Zalo, Teams, Copilot…), nơi thường chặn JavaScript. Hãy mở link bằng <b>Safari</b> hoặc <b>Chrome</b>.</p>
   <noscript><p class="stuck" style="opacity:1;max-height:none;margin:10px 0 0;padding:8px 10px;animation:none">Trình duyệt đang tắt JavaScript nên game không chạy được. Hãy mở bằng Safari hoặc Chrome.</p></noscript>
-  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.1 · mod by mrwick68</p>
+  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.2 · mod by mrwick68</p>
  </div>
 </div>
 
@@ -254,7 +254,7 @@ async function loadThree(){
     btnEnter.textContent=`Đang tải cảnh chùa… (${i+1}/${THREE_URLS.length})`;
     try{
       const m=await withTimeout(import(THREE_URLS[i]),(i===0&&THREE_URLS.length>3)?5000:10000);
-      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.1 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
+      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.2 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
       last=new Error('thư viện 3D không hợp lệ');
     }catch(e){ last=e; }
   }
@@ -1390,7 +1390,7 @@ function startSit(i){
   MY.glide={x:s.x,z:s.z}; MY.yaw=Math.PI; MY.pose='sit'; MY.poseUntil=Infinity;     // quay mặt về phía tượng Phật
   medMin=0; medAcc=1; $('#med').classList.remove('hidden'); Snd.bell(.28,true);
   if(i===luckySeat){ do{ luckySeat=ri(0,SEATS.length-1); }while(luckySeat===i); bonusPts('Bồ đoàn may mắn'); }   // bồ đoàn may mắn đổi chỗ sau mỗi lần trúng
-  else toast('Bạn đang ngồi thiền: mỗi giây được 1 điểm bình an. Muốn đứng dậy, cứ đi tiếp.');
+  else toast('Bạn đang ngồi thiền: cứ 5 giây được 1 điểm bình an. Muốn đứng dậy, cứ đi tiếp.');
 }
 function standUp(){
   if(MY.sit<0) return; const s=SEATS[MY.sit],el=MY.sitAcc;
@@ -1400,8 +1400,8 @@ function standUp(){
 }
 function medUpdate(dt,now){                             // thời gian thiền tính theo thời gian chơi thật (không tính lúc tab bị ẩn); vòng hít thở 10 giây
   if(MY.sit<0) return; MY.sitAcc+=dt; medAcc+=dt;
-  const el=MY.sitAcc,whole=Math.floor(el);
-  if(whole>MY.sitPts){ addPts(whole-MY.sitPts); MY.sitPts=whole; }                                  // mỗi giây 1 điểm
+  const el=MY.sitAcc,whole=Math.floor(el/5);
+  if(whole>MY.sitPts){ addPts(whole-MY.sitPts); MY.sitPts=whole; }                                  // mỗi 5 giây 1 điểm
   if(!MY.sit69&&el>=69){ MY.sit69=true; bonusPts('Tròn 69 giây thiền định'); }
   if(medAcc<.1) return; medAcc=0;
   const ph=el%10,inh=ph<4,k=inh?ph/4:1-(ph-4)/6;
@@ -1419,10 +1419,10 @@ function hallUpdate(dt){                                // vào/ra chánh điệ
 
 /* ===== 10c. ĐIỂM BÌNH AN · THĂNG CẤP · CHÀO KÍNH · BẢNG XẾP HẠNG =====
    Nguồn điểm: thắp hương (1 nén +3, 3 nén +10, tính 15 giây một lần) · thỉnh chuông và gõ mõ theo độ chính xác khi chạm
-   (≥90% +5 · 80–90% +4 · 70–80% +3 · 40–70% +2 · dưới 40% không tính) · ngồi thiền (+1 mỗi giây) ·
+   (≥90% +3 · 70–90% +2 · dưới 70% +1 · lệch quá xa, dưới 40%, không tính) · ngồi thiền (+1 mỗi 5 giây) ·
    thưởng ngẫu nhiên 1–30 điểm khi ngồi đúng bồ đoàn may mắn (ẩn, đổi sau mỗi lần trúng) hoặc ngồi tròn 69 giây. */
 function accOf(ms){ ms=Math.abs(ms); if(ms<95) return 100-ms/95*10; if(ms<190) return 90-(ms-95)/95*20; if(ms<300) return 70-(ms-190)/110*30; return Math.max(0,40-(ms-300)/60*40); }
-const ptsOf=acc=>acc>=90?5:acc>=80?4:acc>=70?3:acc>=40?2:0;
+const ptsOf=acc=>acc>=90?3:acc>=70?2:acc>=40?1:0;
 let saveT=0,lastIncPts=-99;
 function saveSoon(){ clearTimeout(saveT); saveT=setTimeout(()=>Store.save(),1500); }
 function flyText(s){ const d=document.createElement('div'); d.className='fly'; d.textContent=s; $('#hud').appendChild(d); setTimeout(()=>d.remove(),1400); }
