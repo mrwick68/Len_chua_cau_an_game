@@ -1,20 +1,24 @@
 #!/usr/bin/env node
 'use strict';
 /* =====================================================================
-   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 4
+   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 5
    - Không cần cài thư viện: chỉ cần Node.js >= 18.  Chạy:  node server.js
    - Một cổng duy nhất:
        GET  /              -> index.html (nén gzip, có ETag)
        GET  /three.module.min.js -> bản Three.js đặt cạnh server (tuỳ chọn)
-       GET  /health        -> trạng thái JSON (số kết nối, số phòng)
+       GET  /health        -> trạng thái JSON (số kết nối, số phòng, số người trên bảng xếp hạng)
        WS   /ws            -> kênh chơi online
    - Giao thức WebSocket (JSON):
-       client -> {t:'hello',v:2,id,room,n,r,h,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)   h = kiểu tóc 0..4, a = dáng 0..9 (9 = ngồi thiền)
-       client -> {t:'s',x,z,y,a} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
+       client -> {t:'hello',v:3,id,u,room,n,r,h,l,p,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)
+                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..16, p = điểm bình an, a = dáng 0..10 (9 ngồi thiền, 10 cúi chào)
+       client -> {t:'s',x,z,y,a} | {t:'sc',l,p} | {t:'lb'} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
        server -> {t:'welcome',room,peers:[...]} | {t:'join',p} | {t:'leave',id}
                  {t:'snap',d:[[id,x,z,y,a],...]}  (gộp, chỉ gửi phần thay đổi, mặc định 5 lần/giây)
+                 {t:'lv',id,l,p} | {t:'lb',d:[[tên,bậc,điểm,đang_online],...],me,meRow,total}
                  {t:'pong',ts} | {t:'ev',id,k} | {t:'full'}
-   - Không ghi tên/vị trí ra đĩa, không có cơ sở dữ liệu; mọi thứ chỉ nằm trong RAM.
+   - Vị trí và tên chỉ nằm trong RAM. Bảng xếp hạng (mã ẩn danh → tên, bậc, điểm) được lưu ra file board.json (thư mục DATA_DIR)
+     để còn lại khi khởi động lại. Trên dịch vụ có đĩa tạm (ví dụ Render gói Free) file này mất khi dịch vụ khởi động lại;
+     khi đó bảng sẽ được dựng lại dần từ điểm mà mỗi máy tự báo khi người chơi vào lại chùa.
    ===================================================================== */
 const http = require('http'), fs = require('fs'), path = require('path'), crypto = require('crypto'), zlib = require('zlib');
 
@@ -30,15 +34,21 @@ const IDLE_MS = num(E.IDLE_MS, 25000, 3000, 300000);   // ngắt kết nối n�
 const TRUST_PROXY = E.TRUST_PROXY === '1';             // đặt 1 khi chạy sau Caddy/Nginx/Cloudflare/Render để lấy IP thật từ X-Forwarded-For
 const ORIGINS = (E.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean); // để trống = cho mọi nguồn
 const ROOT = path.resolve(E.STATIC_DIR || __dirname);
+const DATA_DIR = path.resolve(E.DATA_DIR || ROOT);     // nơi ghi board.json
+const MAX_BOARD = num(E.MAX_BOARD, 5000, 10, 100000);  // số người tối đa lưu trên bảng xếp hạng
 const MAX_MSG = 1024;                                  // byte tối đa mỗi tin nhắn từ client
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
-const ID_RE = /^[a-z0-9]{4,16}$/, ROOM_RE = /^[a-z0-9-]{1,16}$/;
+const ID_RE = /^[a-z0-9]{4,16}$/, ROOM_RE = /^[a-z0-9-]{1,16}$/, UID_RE = /^[a-z0-9]{10,24}$/;
 const BAD = new Set(['địt', 'đụ', 'đù', 'lồn', 'cặc', 'buồi', 'đéo', 'cứt', 'đĩ', 'dit', 'dm', 'đm', 'dmm', 'đmm', 'dcm', 'đcm', 'dkm', 'đkm', 'vcl', 'vkl', 'vl', 'clgt', 'cmm', 'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt', 'dick']);
+const LVP = [0, 100, 200, 300, 500, 800, 1000, 1300, 2000, 4000, 8000, 10000, 11000, 13000, 16000, 30000, 50000];   // điểm tối thiểu của từng bậc (khớp với game)
+const lvOfP = p => { let l = 0; for (let i = 0; i < LVP.length; i++) if (p >= LVP[i]) l = i; return l; };
 
 /* ---------- 2. Tiện ích ---------- */
 const clampN = (v, a, b) => { const n = Number(v); return Number.isFinite(n) ? Math.round(Math.min(b, Math.max(a, n)) * 100) / 100 : 0; };
-const poseOf = a => { const n = a | 0; return n >= 0 && n <= 9 ? n : 0; };
+const poseOf = a => { const n = a | 0; return n >= 0 && n <= 10 ? n : 0; };
 const hairOf = h => { const n = Math.round(Number(h)); return Number.isFinite(n) && n >= 0 && n <= 4 ? n : 0; };
+const ptsOf = p => { const n = Math.round(Number(p)); return Number.isFinite(n) ? Math.min(1e6, Math.max(0, n)) : 0; };
+const lvOf = (l, p) => { const n = Math.round(Number(l)); return Math.min(Number.isFinite(n) ? Math.min(16, Math.max(0, n)) : 0, lvOfP(p)); };   // bậc không thể cao hơn điểm cho phép
 function cleanName(n) {
   let s = Array.from(String(n == null ? '' : n).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 16).join('');
   if (!s) return 'Khách';
@@ -61,7 +71,27 @@ function getFile(name) {
   cache.set(name, o); return o;
 }
 
-/* ---------- 4. Phòng & kết nối ---------- */
+/* ---------- 4. Bảng xếp hạng (mã ẩn danh → tên, bậc, điểm) ---------- */
+const BOARD_FILE = path.join(DATA_DIR, 'board.json');
+const board = new Map();                                 // uid -> {n,p,l,t}
+let boardDirty = false, boardTimer = null;
+try {
+  const j = JSON.parse(fs.readFileSync(BOARD_FILE, 'utf8'));
+  for (const r of Array.isArray(j) ? j : []) if (Array.isArray(r) && UID_RE.test(r[0])) board.set(r[0], { n: cleanName(r[1]), p: ptsOf(r[2]), l: lvOf(r[3], ptsOf(r[2])), t: Number(r[4]) || 0 });
+} catch (e) { /* chưa có file: bảng trống */ }
+function saveBoard() {
+  boardTimer = null; if (!boardDirty) return; boardDirty = false;
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); const tmp = BOARD_FILE + '.tmp'; fs.writeFileSync(tmp, JSON.stringify([...board].map(([u, r]) => [u, r.n, r.p, r.l, r.t]))); fs.renameSync(tmp, BOARD_FILE); } catch (e) { /* đĩa chỉ đọc: bỏ qua */ }
+}
+function boardSet(uid, name, p, l) {
+  if (!UID_RE.test(uid || '')) return;
+  const old = board.get(uid), np = Math.max(p, old ? old.p : 0);          // điểm chỉ tăng: máy cũ/tab cũ báo thấp hơn không làm tụt bảng
+  board.set(uid, { n: name, p: np, l: Math.max(lvOf(l, np), old ? old.l : 0), t: Date.now() });
+  if (board.size > MAX_BOARD) { let low = null; for (const [u, r] of board) if (!low || r.p < low[1].p || (r.p === low[1].p && r.t < low[1].t)) low = [u, r]; if (low) board.delete(low[0]); }
+  boardDirty = true; if (!boardTimer) { boardTimer = setTimeout(saveBoard, 20000); boardTimer.unref(); }
+}
+
+/* ---------- 5. Phòng & kết nối ---------- */
 const clients = new Set(), rooms = new Map(), perIp = new Map();
 class Room {
   constructor(name) { this.name = name; this.byId = new Map(); this.dirty = new Set(); }
@@ -71,7 +101,7 @@ class Room {
     if (old) { old.room = null; this.dirty.delete(old); this.byId.delete(c.id); old.close(4000); }   // cùng id nối lại: thay phiên cũ, không báo "rời"
     this.byId.set(c.id, c); c.room = this;
     const peers = []; for (const o of this.byId.values()) { if (o !== c && peers.length < 60) peers.push(o.info()); }
-    c.send(JSON.stringify({ t: 'welcome', v: 2, room: this.name, max: MAX_ROOM, peers }));
+    c.send(JSON.stringify({ t: 'welcome', v: 3, room: this.name, max: MAX_ROOM, peers }));
     this.broadcast(JSON.stringify({ t: 'join', p: c.info() }), c);
   }
   remove(c) {
@@ -95,19 +125,28 @@ function assignRoom(name, id) {
   }
   return null;
 }
+function leaderboardFor(uid) {                           // top 50 + vị trí của người hỏi
+  const online = new Set(); for (const c of clients) if (c.u) online.add(c.u);
+  const all = [...board].sort((a, b) => b[1].p - a[1].p || a[1].t - b[1].t);
+  const row = r => [r.n, r.l, r.p, 0];
+  const d = all.slice(0, 50).map(([u, r]) => { const x = row(r); x[3] = online.has(u) ? 1 : 0; return x; });
+  let me = 0, meRow = null; const i = all.findIndex(([u]) => u === uid);
+  if (i >= 0) { me = i + 1; if (i >= 50) { meRow = row(all[i][1]); meRow[3] = 1; } }
+  return { t: 'lb', d, me, meRow, total: board.size };
+}
 
 class Conn {
   constructor(sock, ip) {
     this.sock = sock; this.ip = ip; this.buf = Buffer.alloc(0); this.fragOp = 0; this.frag = []; this.fragLen = 0;
     this.lastRx = Date.now(); this.tokens = 60; this.tokT = Date.now(); this.drops = 0;
-    this.id = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0;
+    this.id = ''; this.u = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.l = 0; this.p = 0; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0; this.lastSc = 0; this.lastLb = 0;
     this.closed = false; this.cleaned = false;
     this.helloT = setTimeout(() => this.close(4001), 5000);       // phải gửi hello trong 5 giây
     sock.on('data', d => { try { this.onData(d); } catch (e) { this.close(1011); } });
     sock.on('close', () => { this.closed = true; this.cleanup(); });
     sock.on('error', () => { });
   }
-  info() { return { id: this.id, n: this.n, r: this.r, h: this.h, x: this.x, z: this.z, y: this.y, a: this.a }; }
+  info() { return { id: this.id, n: this.n, r: this.r, h: this.h, l: this.l, p: this.p, x: this.x, z: this.z, y: this.y, a: this.a }; }
 
   /* --- đọc khung WebSocket (RFC 6455), client luôn che mặt nạ --- */
   onData(d) {
@@ -164,6 +203,16 @@ class Conn {
     if (!this.room) { if (t === 'hello') this.hello(m); return; }
     if (t === 's') { this.x = clampN(m.x, -27, 27); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a); this.room.dirty.add(this); }
     else if (t === 'ping') this.send(JSON.stringify({ t: 'pong', ts: Number(m.ts) || 0 }));
+    else if (t === 'sc') {                                          // báo điểm / bậc mới (tối đa ~3 lần mỗi giây; máy khách tự gộp lại)
+      const now = Date.now(); if (now - this.lastSc < 300) return; this.lastSc = now;
+      this.p = Math.max(this.p, ptsOf(m.p)); this.l = Math.max(this.l, lvOf(m.l, this.p));
+      boardSet(this.u, this.n, this.p, this.l);
+      this.room.broadcast(JSON.stringify({ t: 'lv', id: this.id, l: this.l, p: this.p }), this, false);
+    }
+    else if (t === 'lb') {                                          // xin bảng xếp hạng (tối đa 1 lần mỗi 2 giây)
+      const now = Date.now(); if (now - this.lastLb < 2000) return; this.lastLb = now;
+      this.send(JSON.stringify(leaderboardFor(this.u)));
+    }
     else if (t === 'e') {
       if (m.k !== 'bell') return;
       const now = Date.now(); if (now - this.lastEv < 2500) return; this.lastEv = now;
@@ -175,6 +224,9 @@ class Conn {
     if (typeof m.id !== 'string' || !ID_RE.test(m.id)) return this.close(4003);
     clearTimeout(this.helloT);
     this.id = m.id; this.n = cleanName(m.n); this.r = m.r === 'nau' ? 'nau' : 'lam'; this.h = hairOf(m.h);
+    this.u = typeof m.u === 'string' && UID_RE.test(m.u) ? m.u : '';
+    this.p = ptsOf(m.p); this.l = lvOf(m.l, this.p);
+    if (this.u) { const o = board.get(this.u); if (o) { this.p = Math.max(this.p, o.p); this.l = Math.max(this.l, o.l); } boardSet(this.u, this.n, this.p, this.l); }
     this.x = clampN(m.x, -27, 27); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a);
     const name = typeof m.room === 'string' && ROOM_RE.test(m.room.toLowerCase()) ? m.room.toLowerCase() : '';
     const room = assignRoom(name, this.id);
@@ -211,7 +263,7 @@ class Conn {
   }
 }
 
-/* ---------- 5. Vòng lặp gộp trạng thái + dọn kết nối chết ---------- */
+/* ---------- 6. Vòng lặp gộp trạng thái + dọn kết nối chết ---------- */
 setInterval(() => {
   for (const r of rooms.values()) {
     if (!r.dirty.size) continue;
@@ -227,13 +279,13 @@ setInterval(() => {
 }, TICK_MS).unref();
 setInterval(() => { const now = Date.now(); for (const c of [...clients]) if (now - c.lastRx > IDLE_MS) c.close(4004); }, 5000).unref();
 
-/* ---------- 6. HTTP + nâng cấp WebSocket ---------- */
+/* ---------- 7. HTTP + nâng cấp WebSocket ---------- */
 const server = http.createServer((req, res) => {
   const url = req.url.split('?')[0];
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-    return res.end(JSON.stringify({ ok: true, v: 4, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
+    return res.end(JSON.stringify({ ok: true, v: 5, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
   }
   if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
   const name = FILES[url];
@@ -268,11 +320,11 @@ server.on('clientError', (e, s) => { try { s.destroy(); } catch (_) { } });
 
 server.listen(PORT, HOST, () => {
   const a = server.address();
-  log(`Chùa An Lạc relay v4 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health)`);
+  log(`Chùa An Lạc relay v5 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
   if (!fs.existsSync(path.join(ROOT, 'index.html'))) log('CẢNH BÁO: chưa thấy index.html trong', ROOT);
 });
 function shutdown() {
-  log('Đang tắt…'); for (const c of [...clients]) c.close(1001);
+  log('Đang tắt…'); saveBoard(); for (const c of [...clients]) c.close(1001);
   server.close(() => process.exit(0)); setTimeout(() => process.exit(0), 3000).unref();
 }
 process.on('SIGTERM', shutdown); process.on('SIGINT', shutdown);
