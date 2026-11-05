@@ -1,15 +1,15 @@
 #!/usr/bin/env node
 'use strict';
 /* =====================================================================
-   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68
+   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 4
    - Không cần cài thư viện: chỉ cần Node.js >= 18.  Chạy:  node server.js
    - Một cổng duy nhất:
        GET  /              -> index.html (nén gzip, có ETag)
-       GET  /three.module.min.js -> bản Three.js đặt cạnh server (tuỳ chọn, tránh phụ thuộc CDN)
+       GET  /three.module.min.js -> bản Three.js đặt cạnh server (tuỳ chọn)
        GET  /health        -> trạng thái JSON (số kết nối, số phòng)
        WS   /ws            -> kênh chơi online
    - Giao thức WebSocket (JSON):
-       client -> {t:'hello',v:1,id,room,n,r,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)
+       client -> {t:'hello',v:2,id,room,n,r,h,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)   h = kiểu tóc 0..4, a = dáng 0..9 (9 = ngồi thiền)
        client -> {t:'s',x,z,y,a} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
        server -> {t:'welcome',room,peers:[...]} | {t:'join',p} | {t:'leave',id}
                  {t:'snap',d:[[id,x,z,y,a],...]}  (gộp, chỉ gửi phần thay đổi, mặc định 5 lần/giây)
@@ -27,8 +27,8 @@ const MAX_CLIENTS = num(E.MAX_CLIENTS, 500, 1, 5000);  // tổng kết nối t�
 const MAX_PER_IP = num(E.MAX_PER_IP, 30, 1, 1000);     // kết nối tối đa mỗi IP (mạng di động dùng chung IP nên để rộng)
 const TICK_MS = num(E.TICK_MS, 200, 50, 1000);         // chu kỳ gộp trạng thái gửi cho người chơi
 const IDLE_MS = num(E.IDLE_MS, 25000, 3000, 300000);   // ngắt kết nối nếu quá thời gian này không nhận được gì (client ping mỗi 5 giây)
-const TRUST_PROXY = E.TRUST_PROXY === '1';             // đặt 1 khi chạy sau Caddy/Nginx/Cloudflare để lấy IP thật từ X-Forwarded-For
-const ORIGINS = (E.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean); // để trống = cho mọi nguồn (cần cho file:// có Origin "null")
+const TRUST_PROXY = E.TRUST_PROXY === '1';             // đặt 1 khi chạy sau Caddy/Nginx/Cloudflare/Render để lấy IP thật từ X-Forwarded-For
+const ORIGINS = (E.ALLOWED_ORIGINS || '').split(',').map(s => s.trim()).filter(Boolean); // để trống = cho mọi nguồn
 const ROOT = path.resolve(E.STATIC_DIR || __dirname);
 const MAX_MSG = 1024;                                  // byte tối đa mỗi tin nhắn từ client
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
@@ -37,7 +37,8 @@ const BAD = new Set(['địt', 'đụ', 'đù', 'lồn', 'cặc', 'buồi', 'đ�
 
 /* ---------- 2. Tiện ích ---------- */
 const clampN = (v, a, b) => { const n = Number(v); return Number.isFinite(n) ? Math.round(Math.min(b, Math.max(a, n)) * 100) / 100 : 0; };
-const poseOf = a => { const n = a | 0; return n >= 0 && n <= 8 ? n : 0; };
+const poseOf = a => { const n = a | 0; return n >= 0 && n <= 9 ? n : 0; };
+const hairOf = h => { const n = Math.round(Number(h)); return Number.isFinite(n) && n >= 0 && n <= 4 ? n : 0; };
 function cleanName(n) {
   let s = Array.from(String(n == null ? '' : n).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 16).join('');
   if (!s) return 'Khách';
@@ -70,7 +71,7 @@ class Room {
     if (old) { old.room = null; this.dirty.delete(old); this.byId.delete(c.id); old.close(4000); }   // cùng id nối lại: thay phiên cũ, không báo "rời"
     this.byId.set(c.id, c); c.room = this;
     const peers = []; for (const o of this.byId.values()) { if (o !== c && peers.length < 60) peers.push(o.info()); }
-    c.send(JSON.stringify({ t: 'welcome', v: 1, room: this.name, max: MAX_ROOM, peers }));
+    c.send(JSON.stringify({ t: 'welcome', v: 2, room: this.name, max: MAX_ROOM, peers }));
     this.broadcast(JSON.stringify({ t: 'join', p: c.info() }), c);
   }
   remove(c) {
@@ -99,14 +100,14 @@ class Conn {
   constructor(sock, ip) {
     this.sock = sock; this.ip = ip; this.buf = Buffer.alloc(0); this.fragOp = 0; this.frag = []; this.fragLen = 0;
     this.lastRx = Date.now(); this.tokens = 60; this.tokT = Date.now(); this.drops = 0;
-    this.id = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0;
+    this.id = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0;
     this.closed = false; this.cleaned = false;
     this.helloT = setTimeout(() => this.close(4001), 5000);       // phải gửi hello trong 5 giây
     sock.on('data', d => { try { this.onData(d); } catch (e) { this.close(1011); } });
     sock.on('close', () => { this.closed = true; this.cleanup(); });
     sock.on('error', () => { });
   }
-  info() { return { id: this.id, n: this.n, r: this.r, x: this.x, z: this.z, y: this.y, a: this.a }; }
+  info() { return { id: this.id, n: this.n, r: this.r, h: this.h, x: this.x, z: this.z, y: this.y, a: this.a }; }
 
   /* --- đọc khung WebSocket (RFC 6455), client luôn che mặt nạ --- */
   onData(d) {
@@ -173,7 +174,7 @@ class Conn {
   hello(m) {
     if (typeof m.id !== 'string' || !ID_RE.test(m.id)) return this.close(4003);
     clearTimeout(this.helloT);
-    this.id = m.id; this.n = cleanName(m.n); this.r = m.r === 'nau' ? 'nau' : 'lam';
+    this.id = m.id; this.n = cleanName(m.n); this.r = m.r === 'nau' ? 'nau' : 'lam'; this.h = hairOf(m.h);
     this.x = clampN(m.x, -27, 27); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a);
     const name = typeof m.room === 'string' && ROOM_RE.test(m.room.toLowerCase()) ? m.room.toLowerCase() : '';
     const room = assignRoom(name, this.id);
@@ -232,7 +233,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-    return res.end(JSON.stringify({ ok: true, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
+    return res.end(JSON.stringify({ ok: true, v: 4, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
   }
   if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
   const name = FILES[url];
@@ -267,9 +268,8 @@ server.on('clientError', (e, s) => { try { s.destroy(); } catch (_) { } });
 
 server.listen(PORT, HOST, () => {
   const a = server.address();
-  log(`Chùa An Lạc relay đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health)`);
+  log(`Chùa An Lạc relay v4 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health)`);
   if (!fs.existsSync(path.join(ROOT, 'index.html'))) log('CẢNH BÁO: chưa thấy index.html trong', ROOT);
-  if (!fs.existsSync(path.join(ROOT, 'three.module.min.js'))) log('Gợi ý: đặt three.module.min.js cạnh server.js để game không phụ thuộc CDN (xem HUONG-DAN-MAY-CHU.md).');
 });
 function shutdown() {
   log('Đang tắt…'); for (const c of [...clients]) c.close(1001);
