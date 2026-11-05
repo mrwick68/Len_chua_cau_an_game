@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* =====================================================================
-   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 5.1
+   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 5.3
    - Không cần cài thư viện: chỉ cần Node.js >= 18.  Chạy:  node server.js
    - Một cổng duy nhất:
        GET  /              -> index.html (nén gzip, có ETag)
@@ -9,12 +9,13 @@
        GET  /health        -> trạng thái JSON (số kết nối, số phòng, số người trên bảng xếp hạng)
        WS   /ws            -> kênh chơi online
    - Giao thức WebSocket (JSON):
-       client -> {t:'hello',v:3,id,u,room,n,r,h,l,p,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)
-                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..17 (17 = Chân Tu), p = điểm bình an, a = dáng 0..10 (9 ngồi thiền, 10 cúi chào)
-       client -> {t:'s',x,z,y,a} | {t:'sc',l,p} | {t:'lb'} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
+       client -> {t:'hello',v:4,id,u,q,room,n,r,h,l,p,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)
+                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..17 (17 = Chân Tu), p = điểm bình an, a = dáng 0..14 (9 ngồi thiền, 10 cúi chào, 11 ăn, 12 gõ đầu, 13 ký đầu, 14 cắn), q = chế độ yên tĩnh 0/1
+       client -> {t:'s',x,z,y,a} | {t:'sc',l,p} | {t:'lb'} | {t:'ia',to,k} | {t:'qt',v} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
        server -> {t:'welcome',room,peers:[...]} | {t:'join',p} | {t:'leave',id}
                  {t:'snap',d:[[id,x,z,y,a],...]}  (gộp, chỉ gửi phần thay đổi, mặc định 5 lần/giây)
                  {t:'lv',id,l,p} | {t:'lb',d:[[tên,bậc,điểm,đang_online],...],me,meRow,total}
+                 {t:'fx',a,v,k} (tương tác: người a → người v, k = knock|thump|bite) | {t:'ia',ok:0,why} (bị từ chối) | {t:'q',id,q}
                  {t:'pong',ts} | {t:'ev',id,k} | {t:'full'}
    - Vị trí và tên chỉ nằm trong RAM. Bảng xếp hạng (mã ẩn danh → tên, bậc, điểm) được lưu ra file board.json (thư mục DATA_DIR)
      để còn lại khi khởi động lại. Trên dịch vụ có đĩa tạm (ví dụ Render gói Free) file này mất khi dịch vụ khởi động lại;
@@ -41,11 +42,16 @@ const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const ID_RE = /^[a-z0-9]{4,16}$/, ROOM_RE = /^[a-z0-9-]{1,16}$/, UID_RE = /^[a-z0-9]{10,24}$/;
 const BAD = new Set(['địt', 'đụ', 'đù', 'lồn', 'cặc', 'buồi', 'đéo', 'cứt', 'đĩ', 'dit', 'dm', 'đm', 'dmm', 'đmm', 'dcm', 'đcm', 'dkm', 'đkm', 'vcl', 'vkl', 'vl', 'clgt', 'cmm', 'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt', 'dick']);
 const LVP = [0, 100, 200, 500, 1000, 1300, 1800, 2500, 5000, 12000, 18000, 25000, 30000, 40000, 80000, 100000, 500000, 990000];   // điểm tối thiểu của từng bậc (khớp với game; bậc cuối 17 = Chân Tu)
+/* tương tác giữa người chơi: chỉ ngoài chánh điện, trong tầm gần, không gửi dồn dập (mana do mỗi máy tự tính) */
+const HALL = { x0: -17.6, x1: 17.6, z0: -30.8, z1: -10.9 };         // chánh điện (khớp với game)
+const inHall = (x, z) => x > HALL.x0 && x < HALL.x1 && z > HALL.z0 && z < HALL.z1;
+const IA_KINDS = new Set(['knock', 'thump', 'bite']);
+const IA_RANGE = 3.4, IA_GAP = 1200, HIT_WIN = 10000, HIT_MAX = 4;     // tầm tối đa 3,4 m; mỗi người chơi 1 lượt / 1,2 giây; một người bị tối đa 4 lượt / 10 giây
 const lvOfP = p => { let l = 0; for (let i = 0; i < LVP.length; i++) if (p >= LVP[i]) l = i; return l; };
 
 /* ---------- 2. Tiện ích ---------- */
 const clampN = (v, a, b) => { const n = Number(v); return Number.isFinite(n) ? Math.round(Math.min(b, Math.max(a, n)) * 100) / 100 : 0; };
-const poseOf = a => { const n = a | 0; return n >= 0 && n <= 10 ? n : 0; };
+const poseOf = a => { const n = a | 0; return n >= 0 && n <= 14 ? n : 0; };
 const hairOf = h => { const n = Math.round(Number(h)); return Number.isFinite(n) && n >= 0 && n <= 4 ? n : 0; };
 const ptsOf = p => { const n = Math.round(Number(p)); return Number.isFinite(n) ? Math.min(1e6, Math.max(0, n)) : 0; };
 const lvOf = (l, p) => { const n = Math.round(Number(l)); return Math.min(Number.isFinite(n) ? Math.min(17, Math.max(0, n)) : 0, lvOfP(p)); };   // bậc không thể cao hơn điểm cho phép
@@ -139,14 +145,14 @@ class Conn {
   constructor(sock, ip) {
     this.sock = sock; this.ip = ip; this.buf = Buffer.alloc(0); this.fragOp = 0; this.frag = []; this.fragLen = 0;
     this.lastRx = Date.now(); this.tokens = 60; this.tokT = Date.now(); this.drops = 0;
-    this.id = ''; this.u = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.l = 0; this.p = 0; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0; this.lastSc = 0; this.lastLb = 0;
+    this.id = ''; this.u = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.l = 0; this.p = 0; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0; this.lastSc = 0; this.lastLb = 0; this.lastIa = 0; this.hits = []; this.q = 0;
     this.closed = false; this.cleaned = false;
     this.helloT = setTimeout(() => this.close(4001), 5000);       // phải gửi hello trong 5 giây
     sock.on('data', d => { try { this.onData(d); } catch (e) { this.close(1011); } });
     sock.on('close', () => { this.closed = true; this.cleanup(); });
     sock.on('error', () => { });
   }
-  info() { return { id: this.id, n: this.n, r: this.r, h: this.h, l: this.l, p: this.p, x: this.x, z: this.z, y: this.y, a: this.a }; }
+  info() { return { id: this.id, n: this.n, r: this.r, h: this.h, l: this.l, p: this.p, q: this.q, x: this.x, z: this.z, y: this.y, a: this.a }; }
 
   /* --- đọc khung WebSocket (RFC 6455), client luôn che mặt nạ --- */
   onData(d) {
@@ -201,7 +207,7 @@ class Conn {
   handle(m) {
     const t = m.t;
     if (!this.room) { if (t === 'hello') this.hello(m); return; }
-    if (t === 's') { this.x = clampN(m.x, -27, 27); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a); this.room.dirty.add(this); }
+    if (t === 's') { this.x = clampN(m.x, -60, 60); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a); this.room.dirty.add(this); }
     else if (t === 'ping') this.send(JSON.stringify({ t: 'pong', ts: Number(m.ts) || 0 }));
     else if (t === 'sc') {                                          // báo điểm / bậc mới (tối đa ~3 lần mỗi giây; máy khách tự gộp lại)
       const now = Date.now(); if (now - this.lastSc < 300) return; this.lastSc = now;
@@ -209,6 +215,11 @@ class Conn {
       boardSet(this.u, this.n, this.p, this.l);
       this.room.broadcast(JSON.stringify({ t: 'lv', id: this.id, l: this.l, p: this.p }), this, false);
     }
+    else if (t === 'qt') {                                          // bật / tắt chế độ yên tĩnh (không nhận và không gửi tương tác)
+      const q = m.v ? 1 : 0; if (q === this.q) return; this.q = q;
+      this.room.broadcast(JSON.stringify({ t: 'q', id: this.id, q }), this, false);
+    }
+    else if (t === 'ia') this.interact(m);
     else if (t === 'lb') {                                          // xin bảng xếp hạng (tối đa 1 lần mỗi 2 giây)
       const now = Date.now(); if (now - this.lastLb < 2000) return; this.lastLb = now;
       this.send(JSON.stringify(leaderboardFor(this.u)));
@@ -220,14 +231,26 @@ class Conn {
     }
     else if (t === 'bye') this.close(1000);
   }
+  interact(m) {                                                    // gõ đầu / ký đầu / cắn: kiểm tra rồi báo cho cả phòng (ai cũng thấy hiệu ứng)
+    const fail = why => this.send(JSON.stringify({ t: 'ia', ok: 0, why }));
+    const now = Date.now(); if (now - this.lastIa < IA_GAP) return fail('wait');
+    const v = this.room.byId.get(typeof m.to === 'string' ? m.to : '');
+    if (!IA_KINDS.has(m.k) || !v || v === this) return fail('none');
+    if (this.q || v.q) return fail('quiet');
+    if (inHall(this.x, this.z) || inHall(v.x, v.z)) return fail('hall');
+    if (Math.hypot(this.x - v.x, this.z - v.z) > IA_RANGE) return fail('far');
+    v.hits = v.hits.filter(t => now - t < HIT_WIN); if (v.hits.length >= HIT_MAX) return fail('busy');
+    this.lastIa = now; v.hits.push(now);
+    this.room.broadcast(JSON.stringify({ t: 'fx', a: this.id, v: v.id, k: m.k }));
+  }
   hello(m) {
     if (typeof m.id !== 'string' || !ID_RE.test(m.id)) return this.close(4003);
     clearTimeout(this.helloT);
-    this.id = m.id; this.n = cleanName(m.n); this.r = m.r === 'nau' ? 'nau' : 'lam'; this.h = hairOf(m.h);
+    this.id = m.id; this.n = cleanName(m.n); this.r = m.r === 'nau' ? 'nau' : 'lam'; this.h = hairOf(m.h); this.q = m.q ? 1 : 0;
     this.u = typeof m.u === 'string' && UID_RE.test(m.u) ? m.u : '';
     this.p = ptsOf(m.p); this.l = lvOf(m.l, this.p);
     if (this.u) { const o = board.get(this.u); if (o) { this.p = Math.max(this.p, o.p); this.l = Math.max(this.l, o.l); } boardSet(this.u, this.n, this.p, this.l); }
-    this.x = clampN(m.x, -27, 27); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a);
+    this.x = clampN(m.x, -60, 60); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a);
     const name = typeof m.room === 'string' && ROOM_RE.test(m.room.toLowerCase()) ? m.room.toLowerCase() : '';
     const room = assignRoom(name, this.id);
     if (!room) { this.send(JSON.stringify({ t: 'full' })); return this.close(4002); }
@@ -285,7 +308,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-    return res.end(JSON.stringify({ ok: true, v: 5.1, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
+    return res.end(JSON.stringify({ ok: true, v: 5.3, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
   }
   if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
   const name = FILES[url];
@@ -320,7 +343,7 @@ server.on('clientError', (e, s) => { try { s.destroy(); } catch (_) { } });
 
 server.listen(PORT, HOST, () => {
   const a = server.address();
-  log(`Chùa An Lạc relay v5.1 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
+  log(`Chùa An Lạc relay v5.3 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
   if (!fs.existsSync(path.join(ROOT, 'index.html'))) log('CẢNH BÁO: chưa thấy index.html trong', ROOT);
 });
 function shutdown() {
