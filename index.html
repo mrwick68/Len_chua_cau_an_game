@@ -167,7 +167,7 @@ body.ready .stuck{display:none}
   <p class="small" style="margin-top:10px">Lần chạm này cũng sẽ bật âm thanh nền.</p>
   <p id="stuck" class="stuck">Nút vẫn chưa đổi thành “Vào chùa”? Có thể bạn đang mở file trong khung xem trước (Files, Zalo, Teams, Copilot…), nơi thường chặn JavaScript. Hãy mở link bằng <b>Safari</b> hoặc <b>Chrome</b>.</p>
   <noscript><p class="stuck" style="opacity:1;max-height:none;margin:10px 0 0;padding:8px 10px;animation:none">Trình duyệt đang tắt JavaScript nên game không chạy được. Hãy mở bằng Safari hoặc Chrome.</p></noscript>
-  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5 · mod by mrwick68</p>
+  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.1 · mod by mrwick68</p>
  </div>
 </div>
 
@@ -254,7 +254,7 @@ async function loadThree(){
     btnEnter.textContent=`Đang tải cảnh chùa… (${i+1}/${THREE_URLS.length})`;
     try{
       const m=await withTimeout(import(THREE_URLS[i]),(i===0&&THREE_URLS.length>3)?5000:10000);
-      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
+      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.1 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
       last=new Error('thư viện 3D không hợp lệ');
     }catch(e){ last=e; }
   }
@@ -284,18 +284,19 @@ const Store=(()=>{
 })();
 const D=Store.d;
 
-/* ===== 1b. CẤP BẬC (Gia đình Phật tử): Giai đoạn 1 Đoàn sinh → Giai đoạn 2 Huynh trưởng =====
-   p = điểm bình an tối thiểu, s = giai đoạn. Điểm lưu trên máy; gửi lên máy chủ chỉ để xếp hạng. */
+/* ===== 1b. CẤP BẬC (Gia đình Phật tử): Giai đoạn 1 Đoàn sinh → Giai đoạn 2 Huynh trưởng → cấp cuối Chân Tu =====
+   p = điểm bình an tối thiểu, s = giai đoạn (1 Đoàn sinh, 2 Huynh trưởng, 3 Chân Tu). Điểm lưu trên máy; gửi lên máy chủ chỉ để xếp hạng. */
 const LV=[
- {n:'Bậc Mở Mắt',p:0,s:1},{n:'Bậc Cánh Mềm',p:100,s:1},{n:'Bậc Chân Cứng',p:200,s:1},{n:'Bậc Tung Bay',p:300,s:1},
- {n:'Bậc Hướng Thiện',p:500,s:1},{n:'Bậc Sơ Thiện',p:800,s:1},{n:'Bậc Trung Thiện',p:1000,s:1},{n:'Bậc Chánh Thiện',p:1300,s:1},
- {n:'Bậc Hòa',p:2000,s:1},{n:'Bậc Minh',p:4000,s:1},{n:'Bậc Kiến',p:8000,s:1},{n:'Bậc Trực',p:10000,s:1},
- {n:'Tập sự',p:11000,s:2},{n:'Thọ cấp Tập',p:13000,s:2},{n:'Thọ cấp Tín',p:16000,s:2},{n:'Thọ cấp Tấn',p:30000,s:2},{n:'Thọ cấp Dũng',p:50000,s:2}];
-const STAGE=['','Giai đoạn 1 · Đoàn sinh','Giai đoạn 2 · Huynh trưởng'];
+ {n:'Bậc Mở Mắt',p:0,s:1},{n:'Bậc Cánh Mềm',p:100,s:1},{n:'Bậc Chân Cứng',p:200,s:1},{n:'Bậc Tung Bay',p:500,s:1},
+ {n:'Bậc Hướng Thiện',p:1000,s:1},{n:'Bậc Sơ Thiện',p:1300,s:1},{n:'Bậc Trung Thiện',p:1800,s:1},{n:'Bậc Chánh Thiện',p:2500,s:1},
+ {n:'Bậc Hòa',p:5000,s:1},{n:'Bậc Minh',p:12000,s:1},{n:'Bậc Kiến',p:18000,s:1},{n:'Bậc Trực',p:25000,s:1},
+ {n:'Tập sự',p:30000,s:2},{n:'Thọ cấp Tập',p:40000,s:2},{n:'Thọ cấp Tín',p:80000,s:2},{n:'Thọ cấp Tấn',p:100000,s:2},{n:'Thọ cấp Dũng',p:500000,s:2},
+ {n:'Chân Tu',p:990000,s:3}];
+const STAGE=['','Giai đoạn 1 · Đoàn sinh','Giai đoạn 2 · Huynh trưởng','Cấp cuối cùng · Chân Tu'];
 const lvClamp=l=>clamp(Math.round(Number.isFinite(+l)?+l:0),0,LV.length-1);
 const lvOfPts=p=>{ let l=0; for(let i=0;i<LV.length;i++) if(p>=LV[i].p) l=i; return l; };      // bậc cao nhất mà số điểm cho phép
 const lvName=l=>LV[lvClamp(l)].n;
-const lvTag=l=>{ l=lvClamp(l); return (LV[l].s===2?'★ ':'')+LV[l].n; };                          // nhãn trên đầu nhân vật (Huynh trưởng có ★)
+const lvTag=l=>{ l=lvClamp(l); return (LV[l].s>=2?'★ ':'')+LV[l].n; };                          // nhãn trên đầu nhân vật (Huynh trưởng có ★)
 const fmt=n=>Math.round(n||0).toLocaleString('vi-VN');
 D.pts=clamp(Math.round(+D.pts||0),0,1e6); D.lvl=Math.min(lvClamp(D.lvl),lvOfPts(D.pts));
 if(!/^[a-z0-9]{10,24}$/.test(D.pid||'')){ D.pid=Array.from(crypto.getRandomValues(new Uint8Array(8)),b=>b.toString(16).padStart(2,'0')).join(''); Store.save(); }   // mã ẩn danh ngẫu nhiên để không bị tính trùng trên bảng xếp hạng
@@ -1086,7 +1087,7 @@ const Net=(()=>{
   const clean=n=>{const s=String(n||'').replace(/[\u0000-\u001f<>]/g,'').trim().slice(0,16);return (!s||isBad(s))?'Khách':s;};
   const num=(v,a,b)=>Number.isFinite(+v)?clamp(+v,a,b):0;
   const hair=v=>clamp(Math.round(Number.isFinite(+v)?+v:0),0,4);
-    const lvn=v=>clamp(Math.round(Number.isFinite(+v)?+v:0),0,16),pts=v=>clamp(Math.round(Number.isFinite(+v)?+v:0),0,1e6);
+    const lvn=v=>clamp(Math.round(Number.isFinite(+v)?+v:0),0,17),pts=v=>clamp(Math.round(Number.isFinite(+v)?+v:0),0,1e6);
   const slowNet=()=>{const c=navigator.connection;return !!(c&&(c.saveData||/2g/.test(c.effectiveType||'')||c.rtt>700));};
   let enabled=false,dead=false,status='off',kind='',attempt=0,rtt=0,ready=false,opened=false,wasOnline=false,full=false;
   let ws=null,cands=[],ci=0,cur=null,fails=0,retryT=null,connT=null,hbT=null,lastRx=0,relayOk=false,explicit=false;
@@ -1441,7 +1442,7 @@ function rankUI(){
 const LV_WISH=['','Cánh còn mềm nhưng đã biết nương gió. Chúc bạn mỗi ngày thêm một chút nhẹ nhàng.','Chân đã vững hơn một bước. Chúc bạn đi đều và đi chậm trên đường thiện.','Cánh đã tung bay. Chúc bạn giữ lòng rộng mở.',
  'Hướng về điều thiện từng ngày. Chúc bạn thêm nhiều niềm vui giản dị.','Mầm thiện đã nảy. Chúc bạn chăm sóc bằng sự kiên nhẫn.','Thiện tâm ngày một vững. Chúc bạn bình an cùng người thân.','Chánh niệm trong từng việc nhỏ. Chúc bạn nhiều tiếng cười hiền.',
  'Bước thêm một bậc thật đáng quý. Chúc bạn thuận hòa trong mọi mối quan hệ.','Càng đi càng sáng. Chúc bạn nhìn mọi điều bằng ánh mắt dịu dàng.','Thêm một chặng đường tinh tấn. Chúc bạn an nhiên giữa bộn bề.','Thêm một bậc trọn vẹn. Chúc bạn giữ sự chân thành trong mọi lời nói.',
- 'Chào mừng bạn bước sang hàng Huynh trưởng. Chúc bạn làm gương bằng sự tử tế và nhẫn nại.','Chúc bạn tiếp tục tinh tấn và luôn lắng nghe những người đi sau.','Chúc bạn giữ vững niềm tin dịu dàng và sự kiên nhẫn.','Chúc bạn bền bỉ trên đường đi và luôn nhẹ lòng.','Chúc mừng bậc cao nhất. Chúc bạn tiếp tục gieo điều lành thật nhẹ nhàng.'];
+ 'Chào mừng bạn bước sang hàng Huynh trưởng. Chúc bạn làm gương bằng sự tử tế và nhẫn nại.','Chúc bạn tiếp tục tinh tấn và luôn lắng nghe những người đi sau.','Chúc bạn giữ vững niềm tin dịu dàng và sự kiên nhẫn.','Chúc bạn bền bỉ trên đường đi và luôn nhẹ lòng.','Thọ cấp Dũng là một chặng đường dài và đáng quý. Chúc bạn giữ tâm bình thản và tiếp tục gieo điều lành.','Chúc mừng bạn đã đạt cấp cao nhất: Chân Tu. Mong bạn luôn giữ lòng khiêm hạ, nhẹ nhàng và tử tế với mọi người.'];
 function promote(){
   const l=D.lvl|0; if(modalOpen||l>=LV.length-1||lvOfPts(D.pts)<=l) return;
   D.lvl=l+1; Store.save(); me.tag.set(D.name,lvTag(D.lvl)); rankUI(); Net.score(true);
@@ -1470,7 +1471,7 @@ function courtesyUpdate(now){
 function openRank(){
   openModal(`<h2>🏆 Bảng xếp hạng</h2><p class="sub">Xếp theo điểm bình an. Không có thắng thua, chỉ để cùng nhau tinh tấn.</p><div id="lbBox"><p class="small">Đang tải…</p></div><p class="small" id="lbn"></p><div class="row"><button class="btn" data-closable id="lbx">Đóng</button><button class="btn alt" id="lbr">Làm mới</button></div>`);
   const medal=i=>i===0?'🥇':i===1?'🥈':i===2?'🥉':String(i+1);
-  const row=(rk,r,me)=>`<div class="lbrow${me?' me':''}"><div class="rk">${rk}</div><div>${esc(r[0])}${me?' (bạn)':''}${r[3]?' <span title="đang trong chùa">🟢</span>':''}<small>${esc(lvName(r[1]))} · ${LV[lvClamp(r[1])].s===2?'Huynh trưởng':'Đoàn sinh'}</small></div><div class="pt">${fmt(r[2])}</div></div>`;
+  const row=(rk,r,me)=>`<div class="lbrow${me?' me':''}"><div class="rk">${rk}</div><div>${esc(r[0])}${me?' (bạn)':''}${r[3]?' <span title="đang trong chùa">🟢</span>':''}<small>${esc(lvName(r[1]))} · ${['','Đoàn sinh','Huynh trưởng','Cấp cuối cùng'][LV[lvClamp(r[1])].s]}</small></div><div class="pt">${fmt(r[2])}</div></div>`;
   const show=(res)=>{
     const box=$('#lbBox'); if(!box) return; let html='',note='';
     if(res){

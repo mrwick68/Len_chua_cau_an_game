@@ -1,6 +1,6 @@
 {
   "name": "len-chua-cau-an",
-  "version": "5.0.0",
+  "version": "5.1.0",
   "private": true,
   "description": "Lên Chùa Cầu An - game web 3D và máy chủ trung chuyển (mod by mrwick68)",
   "main": "server.js",

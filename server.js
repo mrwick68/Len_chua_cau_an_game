@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* =====================================================================
-   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 5
+   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 5.1
    - Không cần cài thư viện: chỉ cần Node.js >= 18.  Chạy:  node server.js
    - Một cổng duy nhất:
        GET  /              -> index.html (nén gzip, có ETag)
@@ -10,7 +10,7 @@
        WS   /ws            -> kênh chơi online
    - Giao thức WebSocket (JSON):
        client -> {t:'hello',v:3,id,u,room,n,r,h,l,p,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)
-                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..16, p = điểm bình an, a = dáng 0..10 (9 ngồi thiền, 10 cúi chào)
+                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..17 (17 = Chân Tu), p = điểm bình an, a = dáng 0..10 (9 ngồi thiền, 10 cúi chào)
        client -> {t:'s',x,z,y,a} | {t:'sc',l,p} | {t:'lb'} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
        server -> {t:'welcome',room,peers:[...]} | {t:'join',p} | {t:'leave',id}
                  {t:'snap',d:[[id,x,z,y,a],...]}  (gộp, chỉ gửi phần thay đổi, mặc định 5 lần/giây)
@@ -40,7 +40,7 @@ const MAX_MSG = 1024;                                  // byte tối đa mỗi t
 const GUID = '258EAFA5-E914-47DA-95CA-C5AB0DC85B11';
 const ID_RE = /^[a-z0-9]{4,16}$/, ROOM_RE = /^[a-z0-9-]{1,16}$/, UID_RE = /^[a-z0-9]{10,24}$/;
 const BAD = new Set(['địt', 'đụ', 'đù', 'lồn', 'cặc', 'buồi', 'đéo', 'cứt', 'đĩ', 'dit', 'dm', 'đm', 'dmm', 'đmm', 'dcm', 'đcm', 'dkm', 'đkm', 'vcl', 'vkl', 'vl', 'clgt', 'cmm', 'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'cunt', 'dick']);
-const LVP = [0, 100, 200, 300, 500, 800, 1000, 1300, 2000, 4000, 8000, 10000, 11000, 13000, 16000, 30000, 50000];   // điểm tối thiểu của từng bậc (khớp với game)
+const LVP = [0, 100, 200, 500, 1000, 1300, 1800, 2500, 5000, 12000, 18000, 25000, 30000, 40000, 80000, 100000, 500000, 990000];   // điểm tối thiểu của từng bậc (khớp với game; bậc cuối 17 = Chân Tu)
 const lvOfP = p => { let l = 0; for (let i = 0; i < LVP.length; i++) if (p >= LVP[i]) l = i; return l; };
 
 /* ---------- 2. Tiện ích ---------- */
@@ -48,7 +48,7 @@ const clampN = (v, a, b) => { const n = Number(v); return Number.isFinite(n) ? M
 const poseOf = a => { const n = a | 0; return n >= 0 && n <= 10 ? n : 0; };
 const hairOf = h => { const n = Math.round(Number(h)); return Number.isFinite(n) && n >= 0 && n <= 4 ? n : 0; };
 const ptsOf = p => { const n = Math.round(Number(p)); return Number.isFinite(n) ? Math.min(1e6, Math.max(0, n)) : 0; };
-const lvOf = (l, p) => { const n = Math.round(Number(l)); return Math.min(Number.isFinite(n) ? Math.min(16, Math.max(0, n)) : 0, lvOfP(p)); };   // bậc không thể cao hơn điểm cho phép
+const lvOf = (l, p) => { const n = Math.round(Number(l)); return Math.min(Number.isFinite(n) ? Math.min(17, Math.max(0, n)) : 0, lvOfP(p)); };   // bậc không thể cao hơn điểm cho phép
 function cleanName(n) {
   let s = Array.from(String(n == null ? '' : n).replace(/[\u0000-\u001f\u007f<>]/g, '').replace(/\s+/g, ' ').trim()).slice(0, 16).join('');
   if (!s) return 'Khách';
@@ -285,7 +285,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-    return res.end(JSON.stringify({ ok: true, v: 5, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
+    return res.end(JSON.stringify({ ok: true, v: 5.1, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
   }
   if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
   const name = FILES[url];
@@ -320,7 +320,7 @@ server.on('clientError', (e, s) => { try { s.destroy(); } catch (_) { } });
 
 server.listen(PORT, HOST, () => {
   const a = server.address();
-  log(`Chùa An Lạc relay v5 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
+  log(`Chùa An Lạc relay v5.1 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
   if (!fs.existsSync(path.join(ROOT, 'index.html'))) log('CẢNH BÁO: chưa thấy index.html trong', ROOT);
 });
 function shutdown() {
