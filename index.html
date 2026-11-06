@@ -158,6 +158,16 @@ body.ready .stuck{display:none}
 .fi.out{opacity:0}
 @keyframes fiIn{from{opacity:0;transform:translateY(-4px)}}
 .decay{background:#ffd27a1a;border:1px solid #ffd27a55;border-radius:12px;padding:8px 10px;margin:8px 0 0;font-size:12.5px;line-height:1.45;text-align:left;color:#ffe3b0}
+.robes.v3{grid-template-columns:1fr 1fr 1fr}
+.robes.v3 .robe{flex-direction:column;gap:5px;padding:9px 4px;text-align:center;font-size:13px}
+.robe i.dq{background:#b6ff3b;box-shadow:0 0 10px #b6ff3b,0 0 18px #7ddc10}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding:4px 0;margin:6px 0;-webkit-overflow-scrolling:touch}
+.tabs button{flex:none;padding:7px 12px;border-radius:999px;border:1px solid #fff4;background:#ffffff10;font-size:13px;cursor:pointer;white-space:nowrap}
+.tabs button.on{border-color:var(--gold);background:#ffd27a2a;color:var(--gold)}
+.menu .dish{font-size:12.5px}
+.dob{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:8px;margin:10px 0}
+.dob .field{text-align:center;padding:12px 6px}
+.env{width:112px;height:150px;margin:8px auto;border-radius:10px;background:linear-gradient(#d83a2a,#a5231a);border:2px solid #ffd978;display:grid;place-items:center;font-weight:800;color:#ffd978;font-size:26px;letter-spacing:2px;box-shadow:0 8px 20px #0008;animation:drop .7s cubic-bezier(.2,.9,.3,1.2)}
 </style>
 </head>
 <body>
@@ -167,13 +177,21 @@ body.ready .stuck{display:none}
 <div id="welcome">
  <div class="card">
   <h1 class="title">Lên Chùa Cầu An</h1>
-  <p class="sub">Một chuyến dạo chùa nhẹ nhàng lúc hoàng hôn. Không đăng nhập, không quảng cáo, không công đức bằng tiền.</p>
+  <p class="sub">Một chuyến dạo chùa nhẹ nhàng. Giờ trong game theo giờ máy của bạn: sáng, trưa, chiều, tối. <span id="nowTxt"></span><br>Không đăng nhập, không quảng cáo, không công đức bằng tiền.</p>
   <input id="name" class="field" maxlength="18" autocomplete="off" placeholder="Nhập tên của bạn để vào chùa">
-  <div class="lbl">Trang phục</div>
-  <div class="robes">
-   <button type="button" class="robe on" data-robe="lam"><i style="background:#C5C9D0"></i>Áo lam</button>
-   <button type="button" class="robe" data-robe="nau"><i style="background:#A0522D"></i>Áo nâu sòng</button>
-  </div>
+  <div class="lbl">Bạn đến chùa với tư cách</div>
+    <div class="seg two" id="roleSeg">
+     <button type="button" data-role="phat" class="on">🙏 Phật tử<br><span class="small">áo lam · áo nâu sòng</span></button>
+     <button type="button" data-role="visit">🧳 Người tham quan<br><span class="small">dạ quang · trắng · vàng</span></button>
+    </div>
+    <div class="lbl">Màu áo</div>
+    <div class="robes" id="robeBox">
+     <button type="button" class="robe on" data-robe="lam" data-role="phat"><i style="background:#C5C9D0"></i>Áo lam</button>
+     <button type="button" class="robe" data-robe="nau" data-role="phat"><i style="background:#A0522D"></i>Áo nâu sòng</button>
+     <button type="button" class="robe hidden" data-robe="dq" data-role="visit"><i class="dq"></i>Dạ quang</button>
+     <button type="button" class="robe hidden" data-robe="trang" data-role="visit"><i style="background:#F7F7F2"></i>Trắng</button>
+     <button type="button" class="robe hidden" data-robe="vang" data-role="visit"><i style="background:#F2C230"></i>Vàng</button>
+    </div>
   <div class="lbl">Nhân vật</div>
   <div class="seg two" id="gSeg">
    <button type="button" data-g="m" class="on">👨 Nam<br><span class="small">tóc ngắn</span></button>
@@ -198,7 +216,7 @@ body.ready .stuck{display:none}
   <p class="small" style="margin-top:10px">Lần chạm này cũng sẽ bật âm thanh nền. Không nghe thấy gì trên iPhone? Gạt công tắc im lặng bên hông máy về chế độ có chuông và tăng âm lượng.</p>
   <p id="stuck" class="stuck">Nút vẫn chưa đổi thành “Vào chùa”? Có thể bạn đang mở file trong khung xem trước (Files, Zalo, Teams, Copilot…), nơi thường chặn JavaScript. Hãy mở link bằng <b>Safari</b> hoặc <b>Chrome</b>.</p>
   <noscript><p class="stuck" style="opacity:1;max-height:none;margin:10px 0 0;padding:8px 10px;animation:none">Trình duyệt đang tắt JavaScript nên game không chạy được. Hãy mở bằng Safari hoặc Chrome.</p></noscript>
-  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.5 · mod by mrwick68</p>
+  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.6 · mod by mrwick68</p>
  </div>
 </div>
 
@@ -222,7 +240,7 @@ body.ready .stuck{display:none}
  <div id="tut" class="hidden"><div id="tutTxt"></div><div class="row"><button class="btn" id="tutNext" style="padding:8px 16px;font-size:14px">Tiếp</button><button class="btn alt" id="tutSkip" style="padding:8px 16px;font-size:14px">Bỏ qua</button></div></div>
  <div id="joy"><div id="stick"></div></div>
  <div id="br">
-  <div id="ia" class="hidden"><div class="iaN" id="iaName"></div><div class="iar"><button data-k="knock">🔨 Gõ đầu<small>−10 · họ −20</small></button><button data-k="thump">👊 Ký đầu<small>−15 · họ −25</small></button><button data-k="bite">🦷 Cắn<small>+1 · họ −10</small></button></div></div>
+  <div id="ia" class="hidden"><div class="iaN" id="iaName"></div><div class="iar"><button data-k="knock">🔨 Gõ đầu</button><button data-k="thump">👊 Ký đầu</button><button data-k="bite">🐍 Cắn</button></div></div>
   <button id="lvUp" class="hidden"></button>
   <div id="emotes"><button class="em" id="eHi">🙏 Chắp tay</button><button class="em" id="eWave">👋 Vẫy tay</button></div>
   <button id="act" class="hidden"></button>
@@ -288,7 +306,7 @@ async function loadThree(){
     btnEnter.textContent=`Đang tải cảnh chùa… (${i+1}/${THREE_URLS.length})`;
     try{
       const m=await withTimeout(import(THREE_URLS[i]),(i===0&&THREE_URLS.length>3)?5000:10000);
-      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.5 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
+      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.6 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
       last=new Error('thư viện 3D không hợp lệ');
     }catch(e){ last=e; }
   }
@@ -385,7 +403,7 @@ const Snd=(()=>{
     if(ac||!AC){ if(ac&&!muted) resume(); return; }
     silentUnlock();
     ac=new AC(); master=ac.createGain(); master.gain.value=.9;
-    try{ const cp=ac.createDynamicsCompressor(); cp.threshold.value=-14; cp.knee.value=18; cp.ratio.value=5; cp.attack.value=.004; cp.release.value=.25; master.connect(cp); cp.connect(ac.destination); }catch(e){ master.connect(ac.destination); }
+    try{ const cp=ac.createDynamicsCompressor(); cp.threshold.value=-14; cp.knee.value=18; cp.ratio.value=5; cp.attack.value=.004; cp.release.value=.25; const sh=ac.createWaveShaper(),N=2049,cv=new Float32Array(N); for(let i=0;i<N;i++){ const x=i/(N-1)*2-1,a=Math.abs(x); cv[i]=Math.sign(x)*(a<.6?a:.6+.38*Math.tanh((a-.6)/.38)); } sh.curve=cv; sh.oversample='2x'; master.connect(cp); cp.connect(sh); sh.connect(ac.destination); }catch(e){ master.connect(ac.destination); }
     ambBus=ac.createGain(); ambBus.gain.value=hall?0:1; ambBus.connect(master); buildFx();
     noise=ac.createBuffer(1,ac.sampleRate*3,ac.sampleRate);
     const d=noise.getChannelData(0); let last=0;
@@ -461,6 +479,14 @@ const Snd=(()=>{
   }
   function chime(){ tone(660,.9,.12,'sine',0,0,ambBus); tone(880,1.1,.1,'sine',.18,0,ambBus); tone(1320,1.2,.06,'sine',.36,0,ambBus); }
   function strike(){ tone(300,.12,.15,'triangle',0,180); }
+  /* Tiếng mõ gỗ: thân rỗng (620→330 Hz) + tiếng "cốc" sắc + âm trầm ấm. Phát KHÔ (không dội vọng) để mỗi nhịp gọn và đều như người gõ thật;
+     ba lớp cộng lại đúng bằng "vol" (không vượt trần). Dải 300 Hz – 1,2 kHz để loa điện thoại vẫn nghe rõ. */
+  function mok(vol=.7,delay=0){
+    if(!ac||ac.state!=='running') return; const t=ac.currentTime+delay;
+    const mk=(f0,f1,dur,v,type)=>{ const o=ac.createOscillator(),g=ac.createGain(); o.type=type; o.frequency.setValueAtTime(f0,t); o.frequency.exponentialRampToValueAtTime(f1,t+dur);
+      g.gain.setValueAtTime(0,t); g.gain.linearRampToValueAtTime(v,t+.004); g.gain.exponentialRampToValueAtTime(.0001,t+dur); o.connect(g); g.connect(master); o.start(t); o.stop(t+dur+.05); };
+    mk(620,330,.16,vol*.55,'sine'); mk(1240,700,.07,vol*.28,'triangle'); mk(310,200,.22,vol*.17,'sine');
+  }
   function resume(){                                          // đánh thức âm thanh sau khi bị tạm dừng / ngắt (cuộc gọi, Siri, khoá màn hình, đổi tab…)
     if(!ac||muted) return; session();
     if(silentEl&&silentEl.paused){ try{ const p=silentEl.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
@@ -471,7 +497,7 @@ const Snd=(()=>{
     try{ const p=ac.resume(); if(p&&p.then) p.then(go).catch(()=>{}); else go(); }catch(e){}
   }
   ['touchend','click','keydown'].forEach(ev=>addEventListener(ev,()=>{ if(IOS) session(); if(ac&&!muted&&ac.state!=='running') resume(); },{passive:true,capture:true}));
-  return {init,tone,tock,bell,chime,strike,resume,hello,
+  return {init,tone,tock,bell,chime,strike,mok,resume,hello,
     setTod(v){tod=v},
     setHall(v){ hall=!!v; if(ambBus&&ac) ambBus.gain.setTargetAtTime(hall?0:1,ac.currentTime,.2); },
     get hall(){return hall},
@@ -533,23 +559,45 @@ const stars=makePoints(260,{add:true,size:.7});
 for(let i=0;i<260;i++){const a=rnd(0,6.283),e=Math.acos(rnd(.06,1));stars.pos.set([Math.sin(e)*Math.cos(a)*185,Math.cos(e)*185,Math.sin(e)*Math.sin(a)*185],i*3);stars.al[i]=rnd(.3,1);stars.sz[i]=rnd(.5,1.4);} stars.dirty(); stars.p.renderOrder=-9;
 const moon=new THREE.Mesh(new THREE.SphereGeometry(5,16,12),new THREE.MeshBasicMaterial({color:0xeef2ff,fog:false})); moon.position.set(60,110,-90); scene.add(moon);
 
-/* Chu kỳ ngày-đêm: hoàng hôn (0) → đêm (1) trong ~5 phút rồi giữ nguyên */
+/* Chu kỳ ngày-đêm THEO GIỜ HỆ THỐNG của thiết bị:
+   • sáng + trưa (06:30 – 13:00): trời sáng hơn bầu trời "chiều" cũ một chút (xanh nhạt, nắng cao);
+   • 13:00 – 15:00: chuyển dần sang chiều;  • chiều (15:00 – 18:30): giữ đúng bầu trời hoàng hôn như bản cũ;
+   • 18:30 – 19:30: chuyển sang đêm;  • đêm (19:30 – 05:00): giữ đúng như bản cũ;  • 05:00 – 06:30: rạng sáng chuyển dần sang ngày.
+   tod: 0 = hoàng hôn → 1 = đêm (như cũ);  dayW: 0..1 trộn thêm bầu trời ban ngày;  warmW: nắng ấm buổi sáng sớm. */
 const C=(h)=>new THREE.Color(h);
-const PAL={top:[C(0x6c5a9c),C(0x080d26)],hor:[C(0xf4a266),C(0x27305a)],hSky:[C(0xffd7a8),C(0x5f70b0)],hGnd:[C(0x6a4a3a),C(0x1a1f33)],sunC:[C(0xffb070),C(0x8aa2e8)]};
-let tod=0,todSpeed=1/300,todForce=null,_c1=new THREE.Color();
+const PAL={top:[C(0x6c5a9c),C(0x080d26),C(0x78aee8)],hor:[C(0xf4a266),C(0x27305a),C(0xdbe8f0)],hSky:[C(0xffd7a8),C(0x5f70b0),C(0xfff3de)],hGnd:[C(0x6a4a3a),C(0x1a1f33),C(0x8b6e58)],sunC:[C(0xffb070),C(0x8aa2e8),C(0xfff0d2)]};
+const WARM_SUN=C(0xffd9a0),WARM_HOR=C(0xf6d8b8);
+let tod=0,dayW=0,warmW=0,todForce=null,hourForce=null,_c1=new THREE.Color();
+function clockHour(){ if(hourForce!==null) return hourForce; const t=new Date(); return t.getHours()+t.getMinutes()/60+t.getSeconds()/3600; }
+const phaseName=h=>h>=5&&h<11?'buổi sáng':h>=11&&h<14?'buổi trưa':h>=14&&h<18.5?'buổi chiều':'buổi tối';
+function clockSolve(){
+  if(todForce!==null){ tod=todForce; dayW=0; warmW=0; return; }
+  const h=clockHour(); let k=0,d=0;
+  if(h<5){ k=1; }
+  else if(h<6.5){ k=1; d=smooth(5,6.5,h); }
+  else if(h<13){ d=1; }
+  else if(h<15){ d=1-smooth(13,15,h); }
+  else if(h<18.5){ }
+  else if(h<19.5){ k=smooth(18.5,19.5,h); }
+  else { k=1; }
+  tod=k; dayW=d; warmW=(h>=5&&h<10)?1-smooth(6,10,h):0;
+}
 function applyTod(){
-  const k=smooth(0,1,tod);
-  skyU.top.value.lerpColors(PAL.top[0],PAL.top[1],k); skyU.hor.value.lerpColors(PAL.hor[0],PAL.hor[1],k);
-  fogCol.copy(skyU.hor.value).multiplyScalar(lerp(1,.8,k)); scene.fog.color.copy(fogCol);
-  hemi.color.lerpColors(PAL.hSky[0],PAL.hSky[1],k); hemi.groundColor.lerpColors(PAL.hGnd[0],PAL.hGnd[1],k); hemi.intensity=lerp(1.7,.85,k);
-  sun.color.lerpColors(PAL.sunC[0],PAL.sunC[1],k); sun.intensity=lerp(2.6,.7,k);
-  sun.position.set(lerp(-36,-20,k),lerp(16,46,k),lerp(20,16,k)); sun.target.position.set(0,0,0);
-  skyU.sunDir.value.set(-.85,lerp(.1,-.4,k),.5).normalize(); skyU.sunI.value=1-k;
-  stars.m.uniforms.uGlobal.value=smooth(.35,.9,k); moon.visible=k>.4; moon.material.color.setScalar(smooth(.4,.8,k));
-  lights.hall.intensity=lerp(40,150,k); lights.burner.intensity=lerp(25,90,k); lights.pond.intensity=lerp(18,70,k); lights.bell.intensity=lerp(18,60,k); if(lights.rest) lights.rest.intensity=lerp(30,120,k);
-  glow.m.uniforms.uGlobal.value=lerp(.35,1,k);
-  lanternMat.color.lerpColors(C(0xc9402c),C(0xff7a3c),k);
-  Snd.setTod(k);
+  const k=smooth(0,1,tod),d=dayW,ke=k*(1-d);                  // ke: mức "đêm" thực tế (về 0 khi trời đã sáng hẳn, để mọi thứ liền mạch)
+  skyU.top.value.lerpColors(PAL.top[0],PAL.top[1],k).lerp(PAL.top[2],d);
+  skyU.hor.value.lerpColors(PAL.hor[0],PAL.hor[1],k).lerp(PAL.hor[2],d); if(warmW>0) skyU.hor.value.lerp(WARM_HOR,warmW*d*.4);
+  fogCol.copy(skyU.hor.value).multiplyScalar(lerp(1,.8,ke)); scene.fog.color.copy(fogCol);
+  hemi.color.lerpColors(PAL.hSky[0],PAL.hSky[1],k).lerp(PAL.hSky[2],d); hemi.groundColor.lerpColors(PAL.hGnd[0],PAL.hGnd[1],k).lerp(PAL.hGnd[2],d); hemi.intensity=lerp(lerp(1.7,.85,k),2.0,d);
+  sun.color.lerpColors(PAL.sunC[0],PAL.sunC[1],k).lerp(PAL.sunC[2],d); if(warmW>0) sun.color.lerp(WARM_SUN,warmW*d*.6); sun.intensity=lerp(lerp(2.6,.7,k),3.0,d);
+  sun.position.set(lerp(lerp(-36,-20,k),-20,d),lerp(lerp(16,46,k),38,d),lerp(lerp(20,16,k),16,d)); sun.target.position.set(0,0,0);
+  skyU.sunDir.value.set(lerp(-.85,-.55,d),lerp(lerp(.1,-.4,k),.5,d),.5).normalize(); skyU.sunI.value=lerp(1-k,.7,d);
+  stars.m.uniforms.uGlobal.value=smooth(.35,.9,k)*(1-d); moon.visible=ke>.4; moon.material.color.setScalar(smooth(.4,.8,ke));
+  const lf=1-.85*d;                                           // đèn điểm / quầng đèn lồng dịu đi khi trời sáng
+  lights.hall.intensity=lerp(40,150,ke)*lf; lights.burner.intensity=lerp(25,90,ke)*lf; lights.pond.intensity=lerp(18,70,ke)*lf; lights.bell.intensity=lerp(18,60,ke)*lf; if(lights.rest) lights.rest.intensity=lerp(30,120,ke)*lf;
+  glow.m.uniforms.uGlobal.value=lerp(.35,1,ke)*lf;
+  lanternMat.color.lerpColors(C(0xc9402c),C(0xff7a3c),ke);
+  if(robeMats.dq) robeMats.dq.emissiveIntensity=lerp(.25,1.1,ke);   // áo dạ quang sáng rõ hơn khi trời tối
+  Snd.setTod(ke);
 }
 
 /* ===== 5. KIẾN TRÚC CHÙA ===== */
@@ -749,7 +797,7 @@ function buildTemple(){
   /* --- Tường rào + va chạm --- */
   B.box(0,1.1,-33.3,53,2.2,.9,PALE); colB(-26.5,26.5,-33.8,-32.6);
   B.box(-26.4,1.1,-1,.9,2.2,65,PALE);
-  B.box(26.4,1.1,-19.7,.9,2.2,27.6,PALE); B.box(26.4,1.1,15.7,.9,2.2,31.6,PALE);     // tường đông chừa cổng sang Nhà Hàng Chay Tịnh Tâm (z từ -5,2 đến -0,8)
+  B.box(26.4,1.1,-19.7,.9,2.2,27.6,PALE); B.box(26.4,1.1,15.7,.9,2.2,31.6,PALE);     // tường đông chừa cổng sang Quán chay Thôi Kệ (z từ -5,2 đến -0,8)
   colB(25.95,26.85,-33.5,-5.9); colB(25.95,26.85,-.1,31.5);
   B.box(-19.5,1.1,31,14,2.2,.9,PALE); B.box(19.5,1.1,31,14,2.2,.9,PALE); colB(-26.5,-12.4,30.4,31.6); colB(12.4,26.5,30.4,31.6);
   /* --- Cổng tam quan --- */
@@ -779,6 +827,11 @@ function buildTemple(){
   /* --- Bồ đoàn cho khách ngồi tụng kinh --- */
   SEATS.length=0;       // 5 hàng x 10 = 50 bồ đoàn, chừa lối đi giữa
   for(let r=0;r<5;r++) for(let c=0;c<10;c++){ const x=(c<5?-1:1)*(2.2+(c%5)*2.4),z=-12.6-r*2; B.cyl(x,.4,z,.55,.6,.2,0xd9a441,8); B.cyl(x,.52,z,.38,.38,.03,0xb8741f,8); SEATS.push({x,z,used:false,by:null}); }
+    /* --- Khu LẦN TRÀNG HẠT: 12 bồ đoàn đỏ sẫm hai bên, sát bàn thờ (trước tượng Phật) + 2 biển chỉ dẫn --- */
+    for(const sx of [-1,1]){
+      for(let c=0;c<6;c++){ const x=sx*(8.2+c*1.6),z=-22.8; B.cyl(x,.4,z,.52,.58,.2,0x8c2f2f,8); B.cyl(x,.52,z,.36,.36,.03,0xe3b24f,8); BSEATS.push({x,z,used:false,by:null}); }
+      B.cyl(sx*13.4,1.25,-24.5,.09,.09,2.5,WOOD,6); signTwo('KHU','LẦN TRÀNG HẠT',3.0,.95,sx*13.4,2.5,-24.4,0,{bg:'#6e1f18',bd:'#f1d78a',c1:'#ffe9a8',c2:'#ffd978'});
+    }
   /* --- Lư hương đồng lớn giữa sân --- */
   B.cyl(BURN.x,.22,BURN.z,3.2,3.4,.44,0xa8957f,18);
   const prof=[[0,0],[1.5,0],[1.65,.5],[2.0,1.25],[2.2,1.95],[2.0,2.2],[1.8,2.15],[1.8,2.0],[0,2.0]].map(a=>new THREE.Vector2(a[0],a[1]));
@@ -821,36 +874,69 @@ function buildTemple(){
   sign('CHÙA AN LẠC',8,1.5,0,9.0,-12.9,0,66);         // trên chính điện
   sign('CHÙA AN LẠC',8,1.5,0,5.4,31.8,0,66); sign('CHÙA AN LẠC',8,1.5,0,5.4,30.2,Math.PI,66);   // hai mặt cổng tam quan
 }
-const BURN={x:0,z:2},TREE={x:19,z:4},POND={x:16,z:21},LANT=[],SEATS=[];
+const BURN={x:0,z:2},TREE={x:19,z:4},POND={x:16,z:21},LANT=[],SEATS=[],BSEATS=[];
 buildTemple();
 
-/* ===== 5c. NHÀ HÀNG CHAY TỊNH TÂM (khu bên phải chùa: đi qua cổng ở tường phía đông, z ≈ -3) =====
+/* ===== 5c. Quán chay Thôi Kệ (khu bên phải chùa: đi qua cổng ở tường phía đông, z ≈ -3) =====
    Sân lát gạch 28 × 23 m có hàng rào, gian chính mái cong: quầy gọi món + bảng thực đơn + bếp (cô bếp chay),
    6 bàn ăn / 24 ghế đẩu (khách AI cũng sang ăn), đèn lồng. Khối tĩnh gộp vào mesh chung, có va chạm. */
 const ESEATS=[];                                               // ghế ngồi ăn của khách AI
 const REST={gate:{x:26.4,z:-3},spot:{x:41.2,z:-3},x0:26.9,x1:55.5,z0:-14.5,z1:8.5,chef:{x:46.8,z:-3}};
-const MENU=[['🍜','Bún bò chay'],['🍚','Cơm chay'],['🥬','Canh rau dền chay'],['🥣','Nước tương'],['🍢','Đậu hủ chiên'],['🍘','Sườn chiên chay'],['🥛','Sữa đậu nành'],['🌯','Gỏi cuốn chay'],['🍮','Chè đậu xanh'],['🍵','Trà sen'],['🍄','Nấm xào']];
-function signTwo(l1,l2,w,h,x,y,z,ry){                           // biển 2 dòng: "NHÀ HÀNG CHAY" ở trên, "TỊNH TÂM" (to hơn, màu vàng) nằm dưới
+/* THỰC ĐƠN Quán chay Thôi Kệ — theo menu in (đổi theo GIỜ HỆ THỐNG):
+   buổi sáng (trước 16:00): món nước · bánh mì · món khô · món cơm;  chiều – tối (từ 16:00): món xào;  cả ngày: giải khát · lẩu.
+   Mỗi phần tử: [biểu tượng, tên món, nhóm, khung giờ ('am' | 'pm' | 'all')]. Trong game không có tiền nên không hiện giá. */
+const MENU=[];
+const CATS=[['nuoc','Món nước','am'],['banhmi','Bánh mì','am'],['kho','Món khô','am'],['com','Món cơm','am'],['xao','Món xào','pm'],['gk','Giải khát','all'],['lau','Lẩu','all']];
+const EMO={nuoc:'🍜',banhmi:'🥖',kho:'🥗',com:'🍚',xao:'🍳',gk:'🥤',lau:'🍲'};
+const emojiFor=(n,c)=>/Gỏi Cuốn/.test(n)?'🌯':/Bánh Xèo/.test(n)?'🥞':/Cháo/.test(n)?'🥣':/Sủi Cảo|Bánh Bao|Bánh Giò/.test(n)?'🥟':/Cà Phê/.test(n)?'☕':/Trà/.test(n)?'🍵':/Cam |Chanh/.test(n)?'🍊':/Vịt/.test(n)?'🦆':/Bánh Chưng|Bánh Ít/.test(n)?'🍙':/Khăn/.test(n)?'🧻':EMO[c];
+(function(){ const add=(c,s,names)=>names.forEach(n=>MENU.push([emojiFor(n,c),n,c,s]));
+  add('nuoc','am',['Phở Thôi Kệ','Hủ Tiếu Nam Vang','Hủ Tiếu Bò Kho','Hủ Tiếu Cà Ri','Hủ Tiếu Sa Tế','Bún Huế','Bún Thái','Bún Riêu','Bún Mọc','Bún Mắm','Canh Bún','Bánh Canh Cua','Bánh Mì Cà Ri','Bánh Mì Sa Tế']);
+  add('banhmi','am',['Bánh Mì Xíu Mại','Bánh Mì Bì','Bánh Mì Chả Lụa','Bánh Mì Pa Tê','Bánh Mì Thập Cẩm','Bánh Mì Heo Quay','Bánh Bao','Bánh Giò','Bánh Chưng','Bánh Ít Trần']);
+  add('kho','am',['Bánh Hỏi – Thịt Nướng – Chả Giò','Bún Thịt Nướng – Chả Giò','Bánh Ướt Chả Lụa','Bánh Tráng Trộn','Gỏi Cuốn']);
+  add('com','am',['Cơm Tấm Sườn Bì Chả','Cơm Thập Cẩm','Cơm Rau Luộc Kho Quẹt']);
+  add('xao','pm',['Bánh Xèo','Mì Xào Giòn','Mì Xào Mềm','Hủ Tiếu Xào','Miến Xào','Miến Nước','Bánh Hỏi Bò Lá Lốt – Thịt Nướng','Bún Đậu Mắm Tôm','Bánh Mì Hấp','Bánh Mì Xíu Mại','Nấm Né','Vịt Quay Bắc Kinh – Bánh Bao','Cháo Bò Viên','Cháo Gỏi','Sủi Cảo Nước','Sủi Cảo Chiên','Cơm Chiên Cá Mặn','Chả Giò Thôi Kệ','Khổ Qua Cà Ớt','Đậu Hủ Hấp Rau Răm','Bánh Tráng Trộn','Gỏi Cuốn']);
+  add('gk','all',['Rau Má','Nước Sâm','Nước Củ Dền','Nước Bí Đỏ','Nước Nha Đam','Nước Hạt Sen','Nước Dưỡng Nhan','Trà Sữa','Cà Phê Đá','Cà Phê Sữa Đá','Đá Chanh Mật Ong','Cam Vắt Mật Ong','Trà Đá','Khăn Lạnh']);
+  add('lau','all',['Lẩu 02 Người','Lẩu 03 Người','Lẩu 04 Người','Lẩu 05 Người']);
+})();
+const menuSlot=()=>clockHour()>=16?'pm':'am';
+const catsNow=()=>{ const s=menuSlot(); return CATS.filter(c=>c[2]==='all'||c[2]===s); };
+const menuOk=i=>{ const m=MENU[i]; return !!m&&(m[3]==='all'||m[3]===menuSlot()); };
+function signTwo(l1,l2,w,h,x,y,z,ry,th){                        // biển 2 dòng: dòng trên nhỏ, dòng dưới to hơn. Mặc định: nền vàng, chữ đỏ như tờ thực đơn của quán
+  th=Object.assign({bg:'#f2d51e',bd:'#c4271c',c1:'#b3261b',c2:'#d32f1f'},th||{});
   const W=512,H=Math.round(512*h/w);
   const t=canvasTex(W,H,(c)=>{
-    c.fillStyle='#2f6a3a'; c.fillRect(0,0,W,H); c.strokeStyle='#f1d78a'; c.lineWidth=10; c.strokeRect(9,9,W-18,H-18);
-    c.strokeStyle='#f1d78a66'; c.lineWidth=2; c.strokeRect(22,22,W-44,H-44);
+    c.fillStyle=th.bg; c.fillRect(0,0,W,H); c.strokeStyle=th.bd; c.lineWidth=10; c.strokeRect(9,9,W-18,H-18);
+    c.strokeStyle=th.bd+'66'; c.lineWidth=2; c.strokeRect(22,22,W-44,H-44);
     c.textAlign='center'; c.textBaseline='middle';
     const fit=(txt,fs0,wt)=>{ let fs=fs0; c.font=`${wt} ${fs}px "Segoe UI",Roboto,sans-serif`; while(c.measureText(txt).width>W-70&&fs>14){ fs-=2; c.font=`${wt} ${fs}px "Segoe UI",Roboto,sans-serif`; } return fs; };
-    fit(l1,H*.27,'bold'); c.fillStyle='#fff3c8'; c.fillText(l1,W/2,H*.31);
-    fit(l2,H*.40,'bold'); c.fillStyle='#ffd978'; c.fillText(l2,W/2,H*.69);
+    fit(l1,H*.27,'bold'); c.fillStyle=th.c1; c.fillText(l1,W/2,H*.31);
+    fit(l2,H*.40,'bold'); c.fillStyle=th.c2; c.fillText(l2,W/2,H*.69);
   });
   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:t})); m.position.set(x,y,z); m.rotation.y=ry; scene.add(m); return m;
 }
+let menuTex=null,menuDrawn='';
+function drawMenuBoard(force){                                  // vẽ lại bảng thực đơn khi đổi khung giờ (sáng ↔ chiều–tối)
+  if(!menuTex) return; const slot=menuSlot(); if(!force&&slot===menuDrawn) return; menuDrawn=slot;
+  const cv=menuTex.image,c=cv.getContext('2d'),W=cv.width,H=cv.height,F='"Segoe UI",Roboto,sans-serif';
+  c.fillStyle='#f2d51e'; c.fillRect(0,0,W,H); c.strokeStyle='#c4271c'; c.lineWidth=10; c.strokeRect(9,9,W-18,H-18);
+  c.textAlign='center'; c.textBaseline='middle'; c.fillStyle='#c4271c'; c.font=`bold 38px ${F}`; c.fillText(slot==='am'?'MÓN CHO BUỔI SÁNG':'MÓN CHIỀU – TỐI',W/2,50);
+  c.fillStyle='#7a1a12'; c.font=`600 20px ${F}`; c.fillText(slot==='am'?'(bán đến 16h00)':'(bán từ 16h00)',W/2,84);
+  let y=126; c.textAlign='left';
+  for(const ct of catsNow()){
+    const items=MENU.filter(m=>m[2]===ct[0]&&(m[3]==='all'||m[3]===slot)).map(m=>m[1]);
+    c.fillStyle='#1a4aa8'; c.font=`bold 24px ${F}`; c.fillText(ct[1].toUpperCase()+'  ('+items.length+')',32,y); y+=29;
+    c.fillStyle='#2a1a10'; c.font=`500 18px ${F}`;
+    const lines=[]; let line=''; for(const it of items){ const t=line?line+' · '+it:it; if(c.measureText(t).width>W-64&&line){ lines.push(line); line=it; } else line=t; } if(line) lines.push(line);
+    const show=lines.slice(0,2); if(lines.length>2){ let l=show[1]; while(c.measureText(l+' …').width>W-64&&l.length>3) l=l.slice(0,-1).trim(); show[1]=l+' …'; }
+    for(const l of show){ c.fillText(l,32,y); y+=23; } y+=13;
+  }
+  c.textAlign='center'; c.fillStyle='#c4271c'; c.font=`bold 19px ${F}`; c.fillText('Gọi món ở quầy · bê ra bàn ngồi ăn 5 giây',W/2,H-28);
+  menuTex.needsUpdate=true;
+}
 function menuBoard(PZ){                                         // bảng thực đơn trên tường sau quầy, quay mặt về phía tây
-  const W=512,H=600,t=canvasTex(W,H,(c)=>{
-    c.fillStyle='#3b2418'; c.fillRect(0,0,W,H); c.strokeStyle='#e8b857'; c.lineWidth=10; c.strokeRect(9,9,W-18,H-18);
-    c.textAlign='center'; c.textBaseline='middle'; c.fillStyle='#ffe3a0'; c.font='bold 40px "Segoe UI",Roboto,sans-serif'; c.fillText('THỰC ĐƠN · TỊNH TÂM',W/2,56);
-    c.fillStyle='#f1d9a0'; c.font='500 21px "Segoe UI",Roboto,sans-serif'; c.fillText('bê ra bàn ngồi ăn 5 giây · hồi 10 – 50 mana',W/2,98);
-    c.textAlign='left'; c.fillStyle='#fff0cc'; c.font='600 30px "Segoe UI",Roboto,sans-serif'; MENU.forEach((m,i)=>c.fillText('•  '+m[1],54,150+i*36));
-    c.textAlign='center'; c.fillStyle='#d9c08a'; c.font='500 21px "Segoe UI",Roboto,sans-serif'; c.fillText('Gọi liên tiếp 2 món; chưa đầy mana thì nghỉ 10 giây',W/2,H-30);
-  });
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(3.0,3.0*H/W),new THREE.MeshBasicMaterial({map:t})); m.position.set(53.55,2.2,PZ); m.rotation.y=-Math.PI/2; scene.add(m); return m;
+  const cv=document.createElement('canvas'); cv.width=512; cv.height=680; menuTex=new THREE.CanvasTexture(cv); menuTex.colorSpace=THREE.SRGBColorSpace; menuDrawn='';
+  drawMenuBoard(true);
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(2.9,2.9*680/512),new THREE.MeshBasicMaterial({map:menuTex})); m.position.set(53.55,2.12,PZ); m.rotation.y=-Math.PI/2; scene.add(m); return m;
 }
 function buildRestaurant(){
   const {x0,x1,z0,z1}=REST,cz=(z0+z1)/2,PZ=-3;
@@ -868,14 +954,14 @@ function buildRestaurant(){
   B.box(26.4,1.8,-5.9,1.4,3.6,1.4,WOOD); B.box(26.4,1.8,-.1,1.4,3.6,1.4,WOOD); B.box(26.4,3.0,PZ,.9,.5,6.6,WOOD);
   colB(25.7,27.1,-6.6,-5.2); colB(25.7,27.1,-.8,.6);
   roof(26.4,3.4,PZ,2.6,7.8,.9,.25,.5);
-  signTwo('NHÀ HÀNG CHAY','TỊNH TÂM',3.8,1.15,25.93,2.95,PZ,-Math.PI/2); signTwo('NHÀ HÀNG CHAY','TỊNH TÂM',3.8,1.15,26.87,2.95,PZ,Math.PI/2);
+  signTwo('QUÁN CHAY','THÔI KỆ',3.8,1.15,25.93,2.95,PZ,-Math.PI/2); signTwo('QUÁN CHAY','THÔI KỆ',3.8,1.15,26.87,2.95,PZ,Math.PI/2);
   LANT.push([25.0,2.2,-5.9],[25.0,2.2,-.1],[27.8,2.2,-5.9],[27.8,2.2,-.1]);
   /* gian chính: 6 cột, xà, mái cong ngói đỏ, tường sau */
   for(const x of [41.6,47.5,53.2]) for(const z of [-11.2,5.2]){ B.cyl(x,2.6,z,.3,.34,5.2,WOOD,8); B.box(x,.15,z,.95,.3,.95,0x9c8a7a); colC(x,z,.5); }
   B.box(47.4,5.35,-11.2,12.4,.34,.42,WOOD); B.box(47.4,5.35,5.2,12.4,.34,.42,WOOD); B.box(41.6,5.0,PZ,.34,.34,16.8,WOOD);
   roof(47.5,4.5,PZ,14,19,2.2,.4,1.3);
   B.box(53.9,2.6,PZ,.5,5.2,17.2,0xd9b27a); colB(53.65,54.15,-11.6,5.6);
-  signTwo('NHÀ HÀNG CHAY','TỊNH TÂM',5,1.5,41.35,4.9,PZ,-Math.PI/2);
+  signTwo('QUÁN CHAY','THÔI KỆ',5,1.5,41.35,4.9,PZ,-Math.PI/2);
   for(const z of [-10.2,-7.4,1.4,4.2]) LANT.push([41.0,4.2,z]);       // đèn lồng hai bên biển, không che chữ
   /* quầy gọi món + bát, ấm; bếp phía sau; cô bếp được thêm ở mục nhân vật */
   B.box(44.2,.55,PZ,1.5,1.1,8,0x7a3426); G.box(44.2,1.16,PZ,1.9,.12,8.4,GOLD); colB(43.4,45.0,PZ-4.2,PZ+4.2);
@@ -897,6 +983,106 @@ function buildRestaurant(){
   for(const [px,pz] of [[34,-13.4],[44,-13.4],[34,7.4],[44,7.4]]){ B.cyl(px,1.5,pz,.08,.1,3,0x3a2a22,6); LANT.push([px,3.2,pz]); }
 }
 buildRestaurant();
+/* ===== 5d. KHU HÁI LỘC (bên ngoài, cách gác chuông khoảng 7 m về phía nam): cây mai treo bao lì xì + biển hiệu ===== */
+const LOCZ={x:-20.5,z:11.5,spot:{x:-16.3,z:11.5}};
+function buildLocTree(){
+  const tx=LOCZ.x,tz=LOCZ.z,mai=[0xf4d13d,0xf0c02a,0xf6dc5a,0x6f9a44];
+  B.cyl(tx,.3,tz,1.9,2.0,.6,0xb09a82,18);                                          // bệ đá tròn
+  B.cyl(tx,2.3,tz,.42,.62,4.0,0x6b4a30,8);                                         // thân cây
+  for(let i=0;i<5;i++){ const a=i*1.3+.4; B.cyl(tx+Math.cos(a)*.9,4.1,tz+Math.sin(a)*.9,.13,.2,1.9,0x6b4a30,6,{rz:Math.cos(a)*.7,rx:-Math.sin(a)*.7}); }
+  for(let i=0;i<18;i++){ const a=i*2.4,r=rnd(.5,2.3); B.add(new THREE.IcosahedronGeometry(rnd(.7,1.1),1),tx+Math.cos(a)*r,rnd(4.6,6.4),tz+Math.sin(a)*r,pick(mai),{v:.1,sy:.85}); }   // tán hoa mai vàng
+  for(let i=0;i<28;i++){ const a=i*2.4+.3,r=rnd(1.0,2.6),y=rnd(3.5,5.5),x=tx+Math.cos(a)*r,z=tz+Math.sin(a)*r; G.box(x,y,z,.26,.4,.05,0xd32f1f,{v:.03}); G.box(x,y+.17,z,.28,.06,.06,GOLD); G.box(x,y+.27,z,.03,.18,.03,0xe9c98a); }   // bao lì xì treo (lộc)
+  B.box(tx+2.1,.9,tz-1.5,.14,1.8,.14,WOOD); B.box(tx+2.1,.9,tz+1.5,.14,1.8,.14,WOOD);   // hai cột đỡ biển
+  signTwo('XEM SỐ · NHẬN LỘC','HÁI LỘC',3.4,1.05,tx+2.1,2.15,tz,Math.PI/2,{bg:'#8c1f18',bd:'#f1d78a',c1:'#ffe9a8',c2:'#ffd978'});
+  LANT.push([tx+2.5,2.9,tz-1.7],[tx+2.5,2.9,tz+1.7]);
+  colC(tx,tz,1.6);
+}
+buildLocTree();
+
+/* ===== 11.6 THẦN SỐ HỌC VUI + HÁI LỘC (lời Kinh Pháp Cú) =====
+   Tất cả tính ngay trên máy, nội dung viết sẵn, không gọi AI hay mạng ngoài và KHÔNG lưu / gửi đi ngày sinh của bạn (cho nhẹ và riêng tư).
+   Số chủ đạo: rút gọn ngày, tháng, năm sinh riêng từng phần (giữ 11, 22, 33), cộng lại rồi rút gọn (giữ 11, 22, 33).
+   "Nhịp hôm nay": số ngày cá nhân = rút gọn(số tháng cá nhân + ngày hôm nay), số tháng cá nhân = rút gọn(số năm cá nhân + tháng này),
+   số năm cá nhân = rút gọn(ngày sinh + tháng sinh + năm hiện tại). */
+const sumDg=n=>String(n).split('').reduce((a,b)=>a+(+b),0);
+const red1=n=>{ while(n>9&&n!==11&&n!==22&&n!==33) n=sumDg(n); return n; };       // rút gọn, giữ số đặc biệt
+const red9=n=>{ while(n>9) n=sumDg(n); return n; };                                // rút gọn về 1–9
+const lifePath=(d,m,y)=>red1(red1(d)+red1(m)+red1(sumDg(y)));
+function personalDay(d,m,now=new Date()){ const py=red9(red9(d)+red9(m)+red9(now.getFullYear())),pm=red9(py+now.getMonth()+1); return red9(pm+now.getDate()); }
+const NUM_LIFE={
+1:['Thủ Lĩnh Tiên Phong','Bạn sinh ra để đi đầu: nghĩ là làm, ghét chờ đợi. Hay tự nhận mình "không cứng đầu, chỉ có chính kiến".'],
+2:['Người Gìn Giữ Hoà Khí','Nhạy cảm, khéo léo, là mảnh ghép làm cả nhóm êm ấm. Chỉ hơi hay nói "sao cũng được" rồi âm thầm có ý riêng.'],
+3:['Nghệ Sĩ Tươi Vui','Có duyên kể chuyện, đi đâu cũng thành tâm điểm tiếng cười. Hứa thì nhiệt tình, giờ giấc thì hơi... nghệ thuật.'],
+4:['Người Xây Nền Vững','Đáng tin như cây cột nhà: chăm chỉ, ngăn nắp, thích kế hoạch. Thỉnh thoảng cho phép mình tuỳ hứng một chút nhé.'],
+5:['Nhà Phiêu Lưu','Thích mới, thích đi, thích đổi gió. Vali luôn sẵn trong đầu, còn lịch trình thì hay được "cập nhật phút chót".'],
+6:['Người Chăm Sóc Ấm Áp','Thương người, thích bếp núc và tổ ấm. Quên ăn cho mình nhưng không bao giờ quên chuẩn bị phần cho người khác.'],
+7:['Nhà Thám Tử Nhẹ Nhàng','Thích tìm hiểu, thích yên tĩnh, đầu óc chạy nhanh hơn lời nói. Ai cũng tưởng bạn đang trầm tư, thật ra bạn đang nghĩ xem ăn gì.'],
+8:['Người Biến Ý Tưởng Thành Thật','Có óc tổ chức và khí chất thủ lĩnh, làm gì cũng muốn tới nơi tới chốn. Nhớ nghỉ ngơi để pin đừng báo đỏ.'],
+9:['Trái Tim Rộng Mở','Giàu lòng trắc ẩn, thích giúp đời. Nhớ chừa một chút lòng tốt cho chính mình nữa nhé.'],
+11:['Ngọn Đèn Trực Giác','Số đặc biệt: trực giác nhạy, hay "linh cảm" trúng phóc. Cảm xúc nhiều tầng nên cần những phút yên tĩnh.'],
+22:['Kiến Trúc Sư Giấc Mơ','Số đặc biệt: biến giấc mơ lớn thành công trình thật. Đừng ôm hết việc, hãy chia cho người khác một phần vui.'],
+33:['Người Thầy Của Niềm Vui','Số hiếm: ấm áp, bao dung, thích nâng đỡ mọi người. Chỉ cần nhớ tự thưởng cho mình một ly trà.']};
+const NUM_DAY=['',
+'Hôm nay hợp bắt đầu một điều nhỏ xinh: nhắn lời xin lỗi, dọn bàn, hoặc thử món mới. Cứ bước trước, lòng sẽ theo sau 😄',
+'Hôm nay hợp nhường nhịn dịu dàng và nhắn một câu hỏi thăm. Người nhận sẽ cười, bạn cũng thế 🤝',
+'Hôm nay miệng bạn "có duyên" hơn thường lệ: kể một chuyện vui đi, cả bàn sẽ cười 🎈',
+'Hôm nay hợp sắp xếp lại ngăn kéo, danh sách việc hay chiếc ví. Gọn gàng xong là thấy đời nhẹ hẳn 🧹',
+'Hôm nay hợp đổi gió: đi đường khác, nghe bài hát mới, ăn quán lạ. Bất ngờ nhỏ đang chờ bạn 🎒',
+'Hôm nay hợp nấu một món ngon hoặc rủ người thân ăn cơm. Tình thương ngon nhất khi được chia ra 🍲',
+'Hôm nay hợp ngồi yên một chút: một tách trà, một hơi thở sâu. Ý hay thường tới lúc bạn đừng tìm nó 🍵',
+'Hôm nay hợp làm việc "to" bằng bước "nhỏ": chốt một việc đang chần chừ. Xong rồi nhớ tự thưởng 🏆',
+'Hôm nay hợp buông một điều đã cũ và làm một việc tử tế không cần ai biết. Lòng sẽ nhẹ như mây ☁️'];
+/* Lời "lộc": diễn ý ngắn, vui và tích cực theo tinh thần Kinh Pháp Cú (kệ số ghi kèm để tiện tra cứu) */
+const LOCS=[
+['Kệ 2','Giữ tâm sáng khi nói và khi làm, niềm vui sẽ đi theo bạn như bóng theo hình.'],
+['Kệ 5','Hận thù không dập được hận thù. Nụ cười và lòng thương mới là nước mát cho lửa giận.'],
+['Kệ 21','Sống tỉnh thức từng ngày là con đường nhẹ nhàng nhất đi tới bình an.'],
+['Kệ 25','Nhờ siêng năng, tỉnh thức và biết tự chế, người trí dựng cho mình một hòn đảo vững mà nước lũ cũng không cuốn trôi.'],
+['Kệ 35','Tâm khó giữ nhưng giữ được thì an vui. Mỗi lần nhẹ nhàng kéo tâm về là bạn thêm một điểm bình an.'],
+['Kệ 49','Như ong hút mật mà không làm tổn hại đoá hoa, bạn cứ đi giữa đời thật nhẹ nhàng và vui vẻ.'],
+['Kệ 54','Hương hoa không bay ngược gió, nhưng hương của người hiền thì bay khắp mọi hướng.'],
+['Kệ 58–59','Giữa đống bùn rác, hoa sen vẫn nở thơm ngát. Bạn cũng vậy, cứ nở theo cách của mình.'],
+['Kệ 80','Người khôn biết tự điều chỉnh mình, như thợ uốn tên, thợ mộc uốn gỗ: kiên nhẫn một chút là thẳng đẹp.'],
+['Kệ 81','Như núi đá không lay trước gió, lòng vững thì khen chê cũng chỉ là gió thoảng.'],
+['Kệ 82','Lòng như hồ sâu, nghe điều hay thì trong và lặng, thật dễ chịu.'],
+['Kệ 100','Một lời nói tốt lành làm lòng người bình an, quý hơn ngàn lời vô nghĩa.'],
+['Kệ 103','Thắng người ngàn lần không bằng thắng được chính mình một lần.'],
+['Kệ 116','Việc lành hãy làm sớm, đừng để dành đến mai.'],
+['Kệ 118','Đã làm việc lành thì làm tiếp và vui với nó: chất đầy việc tốt là chất đầy niềm vui.'],
+['Kệ 122','Đừng xem nhẹ việc tốt nhỏ. Từng giọt nước nhỏ rồi cũng đầy bình.'],
+['Kệ 160','Chính mình là chỗ dựa của mình. Biết thương mình và giữ mình vững là điều quý nhất.'],
+['Kệ 172','Ai từng lơ là mà biết quay về tỉnh thức sẽ sáng lên như trăng ló khỏi mây.'],
+['Kệ 183','Không làm điều xấu, làm nhiều điều tốt, giữ tâm trong sáng: lời dạy ngắn gọn mà đủ cả đời.'],
+['Kệ 197','Sống thật vui khi không hận thù, ngay giữa những người còn hận thù.'],
+['Kệ 204','Khoẻ mạnh là món lợi lớn, biết đủ là của cải lớn, tin cậy là bà con quý. Có đủ ba thứ ấy là giàu rồi.'],
+['Kệ 223','Lấy không giận thắng giận, lấy điều thiện thắng điều ác, lấy sẻ chia thắng keo kiệt, lấy sự thật thắng dối trá.'],
+['Kệ 354','Chia sẻ điều hay lẽ phải là món quà vượt hơn mọi món quà.']];
+let lastLoc=-1;
+function actLoc(){
+  openModal(`<h2>🧧 Hái Lộc</h2><p class="sub">Chọn một điều vui cho hôm nay.</p><div class="choice"><button id="lcN">🔢 Xem thần số học<br><span class="small">nhập ngày sinh</span></button><button id="lcL">🧧 Hái lộc<br><span class="small">lời Kinh Pháp Cú</span></button></div><div class="row"><button class="btn alt" data-closable id="lcx">Để sau</button></div><p class="small" style="margin-top:10px">Nội dung mang tính giải trí</p>`);
+  $('#lcx').onclick=()=>closeModal(); $('#lcN').onclick=locNum; $('#lcL').onclick=locPick;
+}
+function locNum(){
+  const yr=new Date().getFullYear();
+  cardEl.innerHTML=`<h2>🔢 Thần số học vui</h2><p class="sub">Nhập ngày sinh (dương lịch) để xem số chủ đạo của bạn.</p><div class="dob"><input id="dd" class="field" inputmode="numeric" maxlength="2" placeholder="Ngày" autocomplete="off"><input id="dm" class="field" inputmode="numeric" maxlength="2" placeholder="Tháng" autocomplete="off"><input id="dy" class="field" inputmode="numeric" maxlength="4" placeholder="Năm" autocomplete="off"></div><div class="err" id="le"></div><div class="row"><button class="btn" id="lcgo">Xem số của tôi</button><button class="btn alt" id="lcb">Quay lại</button></div><p class="small" style="margin-top:8px">Ngày sinh chỉ dùng để tính ngay trên máy bạn, không được lưu hay gửi đi.</p>`;
+  const num=id=>{ const v=$('#'+id).value.trim(); return /^\d+$/.test(v)?+v:NaN; };
+  $('#lcb').onclick=actLoc;
+  $('#lcgo').onclick=()=>{
+    const d=num('dd'),m=num('dm'),y=num('dy'),dt=new Date(y,m-1,d);
+    if(!(d>=1&&m>=1&&y>=1900)||y>yr||dt.getFullYear()!==y||dt.getMonth()!==m-1||dt.getDate()!==d||dt>new Date()){ $('#le').textContent='Ngày sinh chưa hợp lệ, bạn kiểm tra lại giúp mình nhé (ví dụ 15 / 8 / 1995).'; return; }
+    const n=lifePath(d,m,y),L=NUM_LIFE[n],pd=personalDay(d,m),special=n===11||n===22||n===33;
+    Snd.tone(880,.4,.1,'sine'); Snd.tone(1320,.6,.06,'sine',.12);
+    cardEl.innerHTML=`<h2>🔢 Số chủ đạo của bạn</h2><div style="font-size:72px;font-weight:800;color:var(--gold);line-height:1.05">${n}</div>${special?'<div class="small">✨ số đặc biệt</div>':''}<p class="sub" style="font-size:17px;color:var(--gold);margin:4px 0"><b>${esc(L[0])}</b></p><p class="sub" style="font-size:15px">${esc(L[1])}</p><div class="decay" style="margin-top:6px">🌤 <b>Nhịp hôm nay (số ${pd})</b><br>${esc(NUM_DAY[pd])}</div><p class="small" style="margin-top:8px">Chỉ để vui, không dự đoán điều gì.</p><div class="row"><button class="btn" id="lcL2">🧧 Hái lộc</button><button class="btn alt" id="lcr">Xem số khác</button><button class="btn alt" data-closable id="lcx2">Đóng</button></div>`;
+    $('#lcL2').onclick=locPick; $('#lcr').onclick=locNum; $('#lcx2').onclick=()=>closeModal();
+  };
+}
+function locPick(){
+  let i; do{ i=ri(0,LOCS.length-1); }while(i===lastLoc&&LOCS.length>1); lastLoc=i; const v=LOCS[i];
+  Snd.tone(660,.3,.1,'sine'); Snd.tone(990,.5,.07,'sine',.14); Snd.tone(1320,.7,.05,'sine',.28);
+  cardEl.innerHTML=`<h2>🧧 Lộc của bạn</h2><div class="env">LỘC</div><p class="slipwrap">${esc(v[1])}</p><p class="small">${esc(v[0])} · diễn ý theo Kinh Pháp Cú</p><div class="row"><button class="btn" id="lcm">🧧 Hái thêm</button><button class="btn alt" id="lcn">🔢 Thần số học</button><button class="btn alt" data-closable id="lcx3">Đóng</button></div>`;
+  $('#lcm').onclick=locPick; $('#lcn').onclick=locNum; $('#lcx3').onclick=()=>closeModal();
+}
+
 lights.rest=new THREE.PointLight(0xffb468,0,34,2); lights.rest.position.set(46,5,-3); scene.add(lights.rest);
 const meshStone=B.build(matStone), meshGold=G.build(matGold);
 
@@ -914,9 +1100,10 @@ const SPOTS=[
   {id:'incense',label:'🪔 Thắp hương',x:0,z:5.8,r:2.7,fx:BURN.x,fz:BURN.z},
   {id:'bell',label:'🔔 Thỉnh chuông',x:-15.2,z:4,r:2.6,fx:-20,fz:4},
   {id:'mok',label:'🪘 Gõ mõ tụng kinh',x:14.2,z:-17.4,r:2.3,fx:16.4,fz:-17.4},
+  {id:'loc',label:'🧧 Hái Lộc',x:LOCZ.spot.x,z:LOCZ.spot.z,r:2.5,fx:LOCZ.x,fz:LOCZ.z},
   {id:'xam',label:'🎋 Xin quẻ đầu năm',x:-14.2,z:-17.4,r:2.3,fx:-16.4,fz:-17.4},
   {id:'wish',label:'✍️ Viết lời cầu an',x:13.7,z:12.5,r:2.6,fx:11.2,fz:12.5},
-  {id:'eat',label:'🍜 Gọi món chay',x:REST.spot.x,z:REST.spot.z,r:2.8,fx:44.2,fz:-3},
+  {id:'eat',label:'🍜 Gọi món',x:REST.spot.x,z:REST.spot.z,r:2.8,fx:44.2,fz:-3},
 ];
 const beaconGeo=new THREE.RingGeometry(.85,1.1,32).rotateX(-Math.PI/2);
 const beaconMat=new THREE.MeshBasicMaterial({color:0xffd27a,transparent:true,opacity:.8,blending:THREE.AdditiveBlending,depthWrite:false});
@@ -964,7 +1151,7 @@ for(let i=0;i<70;i++)fireB.push({x:rnd(-23,23),y:rnd(.8,5),z:rnd(-28,30),ph:rnd(
 const petal=makePoints(70,{color:0xffb3c1,tex:texPetal,size:.45}); const petB=[];
 for(let i=0;i<70;i++)petB.push({x:rnd(-24,24),y:rnd(0,12),z:rnd(-28,30),ph:rnd(0,6.28),v:rnd(.35,.7)});
 function fxUpdate(dt,t){
-  const nf=smooth(.1,.6,tod)*.8+.2;
+  const nf=(smooth(.1,.6,tod)*.8+.2)*(1-.9*dayW);
   for(let i=0;i<70;i++){ const f=fireB[i]; fire.pos[i*3]=f.x+Math.sin(t*f.sp+f.ph)*2; fire.pos[i*3+1]=f.y+Math.sin(t*f.sp*1.7+f.ph)*.8; fire.pos[i*3+2]=f.z+Math.cos(t*f.sp*.8+f.ph)*2; fire.al[i]=(.35+.65*Math.max(0,Math.sin(t*1.6+f.ph)))*nf;
     const p=petB[i]; p.y-=p.v*dt; if(p.y<0){p.y=rnd(9,13);p.x=rnd(-24,24);p.z=rnd(-28,30);} petal.pos[i*3]=p.x+Math.sin(t*.7+p.ph)*1.3; petal.pos[i*3+1]=p.y; petal.pos[i*3+2]=p.z+Math.cos(t*.5+p.ph)*1.1; petal.al[i]=.75; }
   fire.dirty(); petal.dirty();
@@ -992,7 +1179,7 @@ function lampAdd(mine){ if(lamps.length>=LAN_CAP){ if(!mine)return; lamps.splice
 function lampRecolor(){ for(let i=0;i<lamps.length;i++) lampIM.setColorAt(i,_c.set(lamps[i].col)); if(lampIM.instanceColor) lampIM.instanceColor.needsUpdate=true; }
 for(let i=0;i<14;i++)lampAdd(false);
 function lampUpdate(dt,t){ for(let i=0;i<LAN_CAP;i++){ if(i>=lamps.length){lampIM.setMatrixAt(i,ZERO);lampGlow.al[i]=0;continue;} const l=lamps[i]; l.a+=l.w*dt*2; const x=POND.x+Math.cos(l.a)*l.r,z=POND.z+Math.sin(l.a)*l.r;
-  _q.setFromEuler(_e.set(Math.sin(t+l.ph)*.05,l.a,0)); _m.compose(_p.set(x,.64+Math.sin(t*1.5+l.ph)*.015,z),_q,_s.set(1,1,1)); lampIM.setMatrixAt(i,_m); lampGlow.pos[i*3]=x;lampGlow.pos[i*3+1]=1.0;lampGlow.pos[i*3+2]=z; lampGlow.al[i]=.5+.5*smooth(0,.7,tod);}
+  _q.setFromEuler(_e.set(Math.sin(t+l.ph)*.05,l.a,0)); _m.compose(_p.set(x,.64+Math.sin(t*1.5+l.ph)*.015,z),_q,_s.set(1,1,1)); lampIM.setMatrixAt(i,_m); lampGlow.pos[i*3]=x;lampGlow.pos[i*3+1]=1.0;lampGlow.pos[i*3+2]=z; lampGlow.al[i]=(.5+.5*smooth(0,.7,tod))*(1-.7*dayW);}
   lampIM.instanceMatrix.needsUpdate=true; lampGlow.dirty(); }
 
 /* 6f. Chuông đồng treo trong gác (lắc khi thỉnh) */
@@ -1113,9 +1300,11 @@ function onWishSync(list){
 }
 
 /* ===== 7. NHÂN VẬT CHIBI (người chơi + người chơi khác) ===== */
-const ROBE={lam:0xC5C9D0,nau:0xA0522D};          // áo lam = xám trắng (#C5C9D0), áo nâu sòng = nâu sòng (#A0522D)
+const ROBE={lam:0xC5C9D0,nau:0xA0522D,dq:0xB6FF3B,trang:0xF7F7F2,vang:0xF2C230};          // Phật tử: áo lam (#C5C9D0), nâu sòng (#A0522D) · Người tham quan: dạ quang (xanh nõn chuối phát sáng), trắng, vàng
+const ROBE_ROLE={lam:'phat',nau:'phat',dq:'visit',trang:'visit',vang:'visit'},robeOk=r=>ROBE_ROLE[r]?r:'lam';
 const SKIN=0xe8b894,HAIR=0x241c18;
-const robeMats={lam:new THREE.MeshStandardMaterial({color:ROBE.lam,roughness:.9,flatShading:true}),nau:new THREE.MeshStandardMaterial({color:ROBE.nau,roughness:.9,flatShading:true})};
+const robeMats={}; for(const k in ROBE) robeMats[k]=new THREE.MeshStandardMaterial({color:ROBE[k],roughness:.9,flatShading:true});
+robeMats.dq.emissive=new THREE.Color(0x6fc010); robeMats.dq.emissiveIntensity=.25;       // dạ quang: tự phát sáng nhẹ, sáng rõ hơn về đêm (xem applyTod)
 const skinMat=new THREE.MeshStandardMaterial({color:SKIN,roughness:.8,flatShading:true}),hairMat=new THREE.MeshStandardMaterial({color:HAIR,roughness:.9,flatShading:true});
 const gRobe=new THREE.CylinderGeometry(.42,.68,1.25,10).translate(0,.62,0),gHead=new THREE.SphereGeometry(.56,12,10),gHair=new THREE.SphereGeometry(.585,12,8,0,Math.PI*2,0,Math.PI*.55),gArm=new THREE.CylinderGeometry(.11,.13,.62,6).translate(0,-.31,0),gHand=new THREE.SphereGeometry(.14,6,5);
 const TAG_Y=2.95;
@@ -1140,6 +1329,10 @@ const gHairB2=new THREE.CylinderGeometry(.36,.27,1.05,10,1,true,Math.PI/2,Math.P
 const gBun=new THREE.SphereGeometry(.25,8,6);
 const trayMat=new THREE.MeshStandardMaterial({color:0x8a5a34,roughness:.9,flatShading:true}),bowlMat=new THREE.MeshStandardMaterial({color:0xf2e6c9,roughness:.7,flatShading:true}),foodMat=new THREE.MeshStandardMaterial({color:0xd9792a,roughness:.8,flatShading:true});
 const gTray=new THREE.BoxGeometry(.95,.05,.6),gBowl=new THREE.CylinderGeometry(.27,.17,.17,10),gFood=new THREE.CylinderGeometry(.24,.24,.04,10);
+/* Chuỗi tràng hạt: 15 hạt xếp vòng (một mesh gộp, dùng chung cho mọi nhân vật) + tua rủ */
+const malaMat=new THREE.MeshStandardMaterial({color:0x7a4a24,roughness:.55,flatShading:true});
+function mergeBeads(pts,r){ const bg=new THREE.SphereGeometry(r,6,5),P=[],N=[]; for(const p of pts){ const g=bg.toNonIndexed(); g.translate(p[0],p[1],p[2]); P.push(...g.attributes.position.array); N.push(...g.attributes.normal.array); g.dispose(); } const g=new THREE.BufferGeometry(); g.setAttribute('position',new THREE.Float32BufferAttribute(P,3)); g.setAttribute('normal',new THREE.Float32BufferAttribute(N,3)); return g; }
+const gMalaRing=mergeBeads(Array.from({length:15},(_,i)=>{ const a=i/15*Math.PI*2; return [Math.cos(a)*.27,Math.sin(a)*.27,0]; }),.052),gMalaTas=mergeBeads([[0,-.4,0],[0,-.5,0],[0,-.6,0]],.045);
 function makeChibi(robeKey,name,hairCode=0){
   const root=new THREE.Group(),body=new THREE.Group(),upper=new THREE.Group(); root.add(body); body.add(upper);   // upper: đầu + tóc + hai tay (hạ thấp khi ngồi)
   const robe=new THREE.Mesh(gRobe,robeMats[robeKey]); const head=new THREE.Mesh(gHead,skinMat); head.position.y=1.72; head.scale.set(1,.95,1);
@@ -1149,7 +1342,9 @@ function makeChibi(robeKey,name,hairCode=0){
   const tray=new THREE.Group(); tray.position.set(0,.95,.64); tray.visible=false; upper.add(tray);          // khay thức ăn: chỉ hiện khi bê khay / ngồi ăn
   const tb=new THREE.Mesh(gTray,trayMat),b1=new THREE.Mesh(gBowl,bowlMat),fd=new THREE.Mesh(gFood,foodMat),b2=new THREE.Mesh(gBowl,bowlMat);
   b1.position.set(-.12,.11,0); fd.position.set(-.12,.2,0); b2.scale.set(.6,.6,.6); b2.position.set(.3,.08,.05); tray.add(tb,b1,fd,b2);
-  const ch={root,body,upper,robe,tag,tray,robeKey,arms,sk:0,bw:0,hurt:0,hair:-1,hairMeshes:[],pose:'idle',t:Math.random()*10,
+  const mala=new THREE.Group(); mala.position.set(0,.74,.56); mala.visible=false; upper.add(mala);          // chuỗi hạt: chỉ hiện khi lần tràng hạt
+  const malaRing=new THREE.Mesh(gMalaRing,malaMat),malaTas=new THREE.Mesh(gMalaTas,malaMat); mala.add(malaRing,malaTas);
+  const ch={root,body,upper,robe,tag,tray,mala,malaRing,robeKey,arms,sk:0,bw:0,hurt:0,hair:-1,hairMeshes:[],pose:'idle',t:Math.random()*10,
     setRobe(k){this.robeKey=k;robe.material=robeMats[k];arms.forEach(o=>o.a.material=robeMats[k]);},
     setHair(code){
       code=clamp(code|0,0,4); if(code===this.hair) return; this.hair=code;
@@ -1162,9 +1357,9 @@ function makeChibi(robeKey,name,hairCode=0){
     }};
   ch.setHair(hairCode); return ch;
 }
-/* Dáng đứng: idle / walk / pray (chắp tay) / wave / bell / mok / write / xam / sit (ngồi thiền) */
+/* Dáng đứng: idle / walk / pray (chắp tay) / wave / bell / mok / write / xam / sit (thiền định) */
 function animChar(ch,pose,moving,dt){
-  ch.t+=dt; const t=ch.t,[aL,aR]=ch.arms; let bx=0,by=0,lP=0,rP=0,lY=0,rY=0,rZ=0,lZ=0; const sit=pose==='sit'||pose==='eat';      // ngồi thiền hoặc ngồi ăn: hạ thấp người
+  ch.t+=dt; const t=ch.t,[aL,aR]=ch.arms; let bx=0,by=0,lP=0,rP=0,lY=0,rY=0,rZ=0,lZ=0; const sit=pose==='sit'||pose==='eat'||pose==='bead';      // thiền định hoặc ngồi ăn: hạ thấp người
   if(pose==='sit'){ lP=rP=-1.25; lY=-.7; rY=.7; bx=.04+Math.sin(t*.9)*.015; by=Math.sin(t*.9)*.012; }
   else if(pose==='pray'||pose==='incense'||pose==='xam'){ lP=rP=-1.3; lY=-.6; rY=.6; bx=.12+Math.sin(t*1.5)*.02; }
   else if(pose==='wave'){ rP=-2.7; rZ=Math.sin(t*12)*.4; lP=.1; }
@@ -1172,6 +1367,7 @@ function animChar(ch,pose,moving,dt){
   else if(pose==='mok'){ lP=-.6; rP=-1.0+Math.abs(Math.sin(t*5))*.45; bx=.1; }
   else if(pose==='write'){ rP=-.9+Math.sin(t*7)*.12; lP=-.4; bx=.18; }
   else if(pose==='bow'){ lP=rP=-1.2; lY=-.6; rY=.6; }
+  else if(pose==='bead'){ lP=-1.1; lY=-.55; rP=-1.3+Math.sin(t*1.5)*.1; rY=.55; bx=.06+Math.sin(t*.9)*.015; by=Math.sin(t*.9)*.012; }     // lần tràng hạt: hai tay cầm chuỗi hạt trước ngực
   else if(pose==='eat'){ lP=-1.0; rP=-1.75+Math.sin(t*8)*.35; bx=.12+Math.sin(t*8)*.04; }
     else if(pose==='carry'){ lP=rP=-1.15; lY=-.1; rY=.1; bx=.04; by=moving?Math.abs(Math.sin(t*10))*.05:0; }
   else if(pose==='knock'){ rP=-2.4+Math.abs(Math.sin(t*9))*1.5; lP=-.3; bx=.14; }
@@ -1184,14 +1380,14 @@ function animChar(ch,pose,moving,dt){
   ch.body.rotation.x+=(bx-ch.body.rotation.x)*k; ch.body.position.y=by+.2*ch.sk;
   if(ch.hurt>0){ ch.hurt-=dt; ch.body.rotation.z=Math.sin(t*34)*.3*Math.min(1,ch.hurt/.5); } else ch.body.rotation.z+=(0-ch.body.rotation.z)*k;     // bị đánh: lắc lư choáng váng
   const th=.95*ch.bw; ch.upper.rotation.x=th; ch.upper.position.y=-.5*ch.sk+(1-Math.cos(th)); ch.upper.position.z=-Math.sin(th);   // cúi chào: gập người tại eo
-  ch.robe.scale.set(1+.15*ch.sk,1-.4*ch.sk,1+.15*ch.sk); ch.tag.sp.position.y=TAG_Y-.5*ch.sk; ch.tray.visible=(pose==='carry'||pose==='eat'); ch.tray.position.set(0,.95+.22*ch.sk,.64+.22*ch.sk);      // ngồi: thân thấp lại, đầu hạ xuống
+  ch.robe.scale.set(1+.15*ch.sk,1-.4*ch.sk,1+.15*ch.sk); ch.tag.sp.position.y=TAG_Y-.5*ch.sk; ch.tray.visible=(pose==='carry'||pose==='eat'); ch.tray.position.set(0,.95+.22*ch.sk,.64+.22*ch.sk); ch.mala.visible=(pose==='bead'); if(pose==='bead') ch.malaRing.rotation.z=ch.t*.8;      // ngồi: thân thấp lại, đầu hạ xuống
 }
 
 const me=makeChibi('lam','',0); me.root.position.set(0,0,19); me.root.rotation.y=Math.PI; scene.add(me.root);
 me.root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
 const MY={x:0,z:19,yaw:Math.PI,pose:'idle',poseUntil:0,lock:0,lockT0:0,sit:-1,sitT0:0,sitAcc:0,sitPts:0,sit69:false,glide:null,eat:null};
 const remotes=[];       // người chơi khác (được dựng ở mục 9)
-const chef=makeChibi('nau','Cô Bếp Chay',3); chef.root.position.set(REST.chef.x,0,REST.chef.z); chef.root.rotation.y=-Math.PI/2; scene.add(chef.root);   // cô bếp chay đứng sau quầy
+const chef=makeChibi('nau','Cô Bếp',3); chef.root.position.set(REST.chef.x,0,REST.chef.z); chef.root.rotation.y=-Math.PI/2; scene.add(chef.root);   // cô bếp chay đứng sau quầy
 function chefUpdate(dt){ animChar(chef,'mok',false,dt); }
 
 /* ===== 8. KHÁCH HÀNH HƯƠNG AI (InstancedMesh) ===== */
@@ -1244,7 +1440,7 @@ function plan(a){
   setVia(a);
 }
 agents.forEach(a=>{ if(a.state==='walk') plan(a); });
-/* lúc mới vào chùa đã có vài khách AI đang ngồi thiền sẵn (sau một lúc họ sẽ đứng dậy và đi chỗ khác) */
+/* lúc mới vào chùa đã có vài khách AI đang thiền định sẵn (sau một lúc họ sẽ đứng dậy và đi chỗ khác) */
 (function seedSitters(){ let n=0; for(const a of agents){ if(n>=6) break; if(a.group||a.state!=='walk') continue;
   if(a.seat>=0){ SEATS[a.seat].used=false; a.seat=-1; }
   const free=SEATS.map((s,i)=>i).filter(i=>!SEATS[i].used); if(!free.length) break; const si=pick(free),st=SEATS[si];
@@ -1316,7 +1512,7 @@ const Net=(()=>{
   const qs=new URLSearchParams(location.search);
   const ID_RE=/^[a-z0-9]{4,16}$/;
   const id=Array.from(crypto.getRandomValues(new Uint8Array(5)),b=>b.toString(16).padStart(2,'0')).join('');
-  const peers=new Map(); const POSES=['idle','walk','pray','wave','bell','mok','write','xam','incense','sit','bow','eat','knock','thump','bite','carry'];
+  const peers=new Map(); const POSES=['idle','walk','pray','wave','bell','mok','write','xam','incense','sit','bow','eat','knock','thump','bite','carry','bead'];
   const enc=new TextEncoder(),dec=new TextDecoder();
   const u16=n=>[n>>8,n&255], str=s=>{const b=enc.encode(s);return [...u16(b.length),...b]};
   const rl=n=>{const o=[];do{let d=n%128;n=Math.floor(n/128);if(n>0)d|=128;o.push(d);}while(n>0);return o};
@@ -1399,7 +1595,7 @@ const Net=(()=>{
     if(!p||typeof p.id!=='string'||!ID_RE.test(p.id)||p.id===id) return;
     let q=peers.get(p.id); const isNew=!q;
     if(!q){ if(peers.size>=60) return; q={id:p.id,n:'Khách',r:'lam',h:0,l:0,p:0,q:0,x:0,z:0,yaw:0,a:'idle',first:false,rx:0,seen:performance.now(),live:true}; peers.set(p.id,q); }
-    q.n=clean(p.n); q.r=p.r==='nau'?'nau':'lam'; q.h=hair(p.h); q.l=lvn(p.l); q.p=pts(p.p); q.q=p.q?1:0; setState(q,p.x,p.z,p.y,p.a);
+    q.n=clean(p.n); q.r=robeOk(p.r); q.h=hair(p.h); q.l=lvn(p.l); q.p=pts(p.p); q.q=p.q?1:0; setState(q,p.x,p.z,p.y,p.a);
     if(isNew&&announce) onJoin(q);
   }
   function relayData(raw){
@@ -1459,7 +1655,7 @@ const Net=(()=>{
     let p=peers.get(m.i);
     if(!p){ if(peers.size>=40) return; p={id:m.i,n:'Khách',r:'lam',h:0,l:0,p:0,x:0,z:0,yaw:0,a:'idle',first:true,rx:0,seen:now,live:false}; peers.set(m.i,p); }
     if(now-p.rx<60) return; p.rx=now; p.seen=now;
-    p.n=clean(m.n); p.r=m.r==='nau'?'nau':'lam'; p.h=hair(m.h); p.l=lvn(m.l); p.p=pts(m.p); p.x=num(m.x,-60,60); p.z=num(m.z,-34,40); p.yaw=num(m.y,-7,7); p.a=POSES.includes(m.a)?m.a:'idle';
+    p.n=clean(m.n); p.r=robeOk(m.r); p.h=hair(m.h); p.l=lvn(m.l); p.p=pts(m.p); p.x=num(m.x,-60,60); p.z=num(m.z,-34,40); p.yaw=num(m.y,-7,7); p.a=POSES.includes(m.a)?m.a:'idle';
     if(p.first){ p.first=false; onJoin(p); }
   }
 
@@ -1533,7 +1729,7 @@ function remoteUpdate(dt){
   }
   usedR.clear();
   for(const c of remotes){ if(c.pid&&(!Net.peers.has(c.pid)||!vis.has(c.pid))){ c.pid=null; c.root.visible=false; } else if(c.pid) usedR.add(c.pid); }
-  for(const [pid,p] of Net.peers){ if(usedR.has(pid)||!vis.has(pid)) continue; const c=remotes.find(r=>!r.pid); if(!c) break; c.pid=pid; c.root.visible=true; c.setRobe(p.r); c.setHair(p.h|0); c.tag.set(p.n,lvTag(p.l|0)); c.root.position.set(p.x,groundY(p.x,p.z),p.z); c.root.rotation.y=p.yaw; c.sk=(p.a==='sit'||p.a==='eat')?1:0; usedR.add(pid); }
+  for(const [pid,p] of Net.peers){ if(usedR.has(pid)||!vis.has(pid)) continue; const c=remotes.find(r=>!r.pid); if(!c) break; c.pid=pid; c.root.visible=true; c.setRobe(p.r); c.setHair(p.h|0); c.tag.set(p.n,lvTag(p.l|0)); c.root.position.set(p.x,groundY(p.x,p.z),p.z); c.root.rotation.y=p.yaw; c.sk=(p.a==='sit'||p.a==='eat'||p.a==='bead')?1:0; usedR.add(pid); }
   for(const c of remotes){ if(!c.pid) continue; const p=Net.peers.get(c.pid); if(!p) continue; c.tag.set(p.n,lvTag(p.l|0)); if(c.robeKey!==p.r) c.setRobe(p.r); if(c.hair!==(p.h|0)) c.setHair(p.h|0);
     const ox=c.root.position.x,oz=c.root.position.z,far=Math.hypot(p.x-ox,p.z-oz)>6,k=far?1:1-Math.exp(-dt*9); const nx=lerp(ox,p.x,k),nz=lerp(oz,p.z,k); const mv=Math.hypot(nx-ox,nz-oz)/Math.max(dt,.001);
     c.root.position.set(nx,lerp(c.root.position.y,groundY(nx,nz),k),nz); c.root.rotation.y+=angDiff(c.root.rotation.y,p.yaw)*k;
@@ -1590,7 +1786,7 @@ function updatePlayer(dt,now){
   animChar(me,pose,(moving&&pose==='idle')||(autoMove&&pose==='carry'),dt); MY.moving=moving&&pose==='idle';
   // điểm hoạt động gần nhất
   let best=null,bd=1e9; for(const s of SPOTS){ const d=Math.hypot(MY.x-s.x,MY.z-s.z); if(d<s.r&&d<bd){bd=d;best=s;} }
-  if(MY.eat) best=null; else if(MY.sit>=0) best=STAND_SPOT; else { const si=nearSeat(); if(si>=0){ const st=SEATS[si]; if(Math.hypot(MY.x-st.x,MY.z-st.z)<bd) best=st.spot; } }
+  if(MY.eat) best=null; else if(MY.sit>=0) best=STAND_SPOT; else { const si=nearSeat(),bi=nearBSeat(),ds=si>=0?Math.hypot(MY.x-SEATS[si].x,MY.z-SEATS[si].z):1e9,db=bi>=0?Math.hypot(MY.x-BSEATS[bi].x,MY.z-BSEATS[bi].z):1e9; if(Math.min(ds,db)<bd) best=db<ds?BSEATS[bi].spot:SEATS[si].spot; }
   if(best!==curSpot){ curSpot=best; const b=$('#act'); if(best){ b.textContent=best.label; b.classList.remove('hidden'); } else b.classList.add('hidden'); tutCheck(); }
 }
 function setPose(p,sec){ MY.pose=p; MY.poseUntil=performance.now()/1000+sec; }
@@ -1617,12 +1813,13 @@ function onResize(){
 addEventListener('resize',onResize); onResize();
 
 /* ===== 10b. NGỒI THIỀN TRONG CHÁNH ĐIỆN (50 bồ đoàn trước tượng Phật) + ÂM THANH TRONG ĐIỆN =====
-   Chạm nút "Ngồi thiền" khi đứng gần một bồ đoàn trống. Muốn thôi chỉ cần kéo cần điều khiển / bấm phím di chuyển: đứng dậy và đi ngay.
+   Chạm nút "Thiền Định" khi đứng gần một bồ đoàn trống. Muốn thôi chỉ cần kéo cần điều khiển / bấm phím di chuyển: đứng dậy và đi ngay.
    Ngoài sân âm thanh nền như thường; trong chánh điện chỉ còn tiếng chuông ngân (gió, chim, dế, tụng kinh xa… được tắt dần). */
 const HALL={x0:-17.6,x1:17.6,z0:-30.8,z1:-10.9};
 const inHall=(x,z)=>x>HALL.x0&&x<HALL.x1&&z>HALL.z0&&z<HALL.z1;
 const STAND_SPOT={id:'stand',label:'🧘 Đứng dậy'};
-SEATS.forEach((s,i)=>{ s.spot={id:'sit',label:'🧘 Ngồi thiền',seat:i,x:s.x,z:s.z,fx:s.x,fz:-30}; });
+SEATS.forEach((s,i)=>{ s.spot={id:'sit',label:'🧘 Thiền Định',seat:i,x:s.x,z:s.z,fx:s.x,fz:-30}; });
+BSEATS.forEach((s,i)=>{ s.spot={id:'bead',label:'📿 Lần Tràng Hạt',seat:i,x:s.x,z:s.z,fx:s.x,fz:-30}; });
 function seatFree(i){                                   // bồ đoàn trống: chưa ai giữ chỗ, và không có khách AI / người chơi khác đứng ngay đó
   const s=SEATS[i]; if(!s||s.used) return false;
   for(const a of agents){ if(a.state!=='away'&&Math.hypot(a.x-s.x,a.z-s.z)<1.05) return false; }
@@ -1630,7 +1827,9 @@ function seatFree(i){                                   // bồ đoàn trống: 
   return true;
 }
 function nearSeat(){ let bi=-1,bd=1.7; for(let i=0;i<SEATS.length;i++){ const s=SEATS[i],d=Math.hypot(MY.x-s.x,MY.z-s.z); if(d<bd&&seatFree(i)){ bd=d; bi=i; } } return bi; }
-let medAcc=0,medMin=0,luckySeat=ri(0,SEATS.length-1);
+let medAcc=0,medMin=0,luckySeat=ri(0,SEATS.length-1),beadBeat=0,beadN=0,beadBell=0;
+const BEAD_BEAT=.8,BEAD_BELL=22;                         // lần tràng hạt: mõ đều 0,8 giây / nhịp, chuông ngân mỗi 22 giây
+const seatOf=i=>i>=100?BSEATS[i-100]:SEATS[i];           // MY.sit < 100: bồ đoàn thiền định; MY.sit ≥ 100: bồ đoàn lần tràng hạt (100 + chỉ số)
 function bonusPts(why){ const b=ri(1,30); addPts(b); toast(`🎁 ${why}: thưởng ngẫu nhiên +${b} điểm bình an`); Snd.tone(880,.5,.1,'sine'); Snd.tone(1320,.7,.06,'sine',.14); return b; }
 function startSit(i){
   const s=SEATS[i]; if(MY.sit>=0||modalOpen||!s||!seatFree(i)) return;
@@ -1638,36 +1837,59 @@ function startSit(i){
   MY.glide={x:s.x,z:s.z}; MY.yaw=Math.PI; MY.pose='sit'; MY.poseUntil=Infinity;     // quay mặt về phía tượng Phật
   medMin=0; medAcc=1; $('#med').classList.remove('hidden'); Snd.bell(.28,true);
   if(i===luckySeat){ do{ luckySeat=ri(0,SEATS.length-1); }while(luckySeat===i); bonusPts('Bồ đoàn may mắn'); }   // bồ đoàn may mắn đổi chỗ sau mỗi lần trúng
-  else toast('Bạn đang ngồi thiền: cứ 5 giây được 1 điểm bình an. Muốn đứng dậy, cứ đi tiếp.');
+  else toast('Bạn đang thiền định: cứ 5 giây được 1 điểm bình an. Muốn đứng dậy, cứ đi tiếp.');
+}
+function bseatFree(i){                                   // bồ đoàn lần tràng hạt trống: chưa ai giữ chỗ và không ai đứng ngay đó
+  const s=BSEATS[i]; if(!s||s.used) return false;
+  for(const a of agents){ if(a.state!=='away'&&Math.hypot(a.x-s.x,a.z-s.z)<1.05) return false; }
+  for(const c of remotes){ if(c.pid&&Math.hypot(c.root.position.x-s.x,c.root.position.z-s.z)<1.05) return false; }
+  return true;
+}
+function nearBSeat(){ let bi=-1,bd=1.7; for(let i=0;i<BSEATS.length;i++){ const s=BSEATS[i],d=Math.hypot(MY.x-s.x,MY.z-s.z); if(d<bd&&bseatFree(i)){ bd=d; bi=i; } } return bi; }
+function startBead(i){
+  const s=BSEATS[i]; if(MY.sit>=0||modalOpen||!s||!bseatFree(i)) return;
+  const n=performance.now()/1000; MY.sit=100+i; MY.sitT0=n; MY.sitAcc=0; MY.sitPts=0; MY.sit69=true; MY.lock=0; s.used=true; s.by='me';
+  MY.glide={x:s.x,z:s.z}; MY.yaw=Math.PI; MY.pose='bead'; MY.poseUntil=Infinity;
+  medMin=0; medAcc=1; beadBeat=0; beadN=0; beadBell=0; $('#med').classList.remove('hidden'); Snd.bell(.32,true);
+  toast('📿 Bạn đang lần tràng hạt: cứ 5 giây được 1 điểm bình an. Muốn đứng dậy, cứ đi tiếp.');
 }
 function standUp(){
-  if(MY.sit<0) return; const s=SEATS[MY.sit],el=MY.sitAcc;
+  if(MY.sit<0) return; const bead=MY.sit>=100,s=seatOf(MY.sit),el=MY.sitAcc;
   s.used=false; s.by=null; MY.sit=-1; MY.glide=null; MY.pose='idle'; MY.poseUntil=0;
   D.meditate=(D.meditate||0)+Math.round(el); Store.save(); $('#med').classList.add('hidden');
-  if(el>=20){ toast(`Bạn đã ngồi thiền ${el>=60?Math.round(el/60)+' phút':Math.round(el)+' giây'} · +${MY.sitPts} điểm bình an. Thân tâm nhẹ nhàng.`); Snd.bell(.22,true); }
+  if(el>=20){ toast(bead?`Bạn đã lần ${beadN} hạt · +${MY.sitPts} điểm bình an. Tâm nhẹ nhàng.`:`Bạn đã thiền định ${el>=60?Math.round(el/60)+' phút':Math.round(el)+' giây'} · +${MY.sitPts} điểm bình an. Thân tâm nhẹ nhàng.`); Snd.bell(.22,true); }
 }
-function medUpdate(dt,now){                             // thời gian thiền tính theo thời gian chơi thật (không tính lúc tab bị ẩn); vòng hít thở 10 giây
-  if(MY.sit<0) return; MY.sitAcc+=dt; medAcc+=dt; manaAdd(dt/20);     // thiền: +1 mana mỗi 20 giây
+function medUpdate(dt,now){                             // thời gian tính theo thời gian chơi thật (không tính lúc tab bị ẩn)
+  if(MY.sit<0) return; const bead=MY.sit>=100; MY.sitAcc+=dt; medAcc+=dt; manaAdd(dt/20);     // +1 mana mỗi 20 giây
   const el=MY.sitAcc,whole=Math.floor(el/5);
-  if(whole>MY.sitPts){ addPts(whole-MY.sitPts); MY.sitPts=whole; }                                  // mỗi 5 giây 1 điểm
-  if(!MY.sit69&&el>=69){ MY.sit69=true; bonusPts('Tròn 69 giây thiền định'); }
+  if(whole>MY.sitPts){ addPts(whole-MY.sitPts); MY.sitPts=whole; }                                  // mỗi 5 giây 1 điểm (thiền định và lần tràng hạt như nhau)
+  if(bead){                                               // tiếng mõ to, đều + chuông ngân như trong chùa thật
+    beadBeat+=dt; while(beadBeat>=BEAD_BEAT){ beadBeat-=BEAD_BEAT; beadN++; Snd.mok(.8); if(beadN%108===0){ Snd.bell(.5,true); toast('📿 Tròn 108 hạt. Nam mô A Di Đà Phật 🙏'); } }
+    beadBell+=dt; if(beadBell>=BEAD_BELL){ beadBell=0; Snd.bell(.26,true); }
+  } else if(!MY.sit69&&el>=69){ MY.sit69=true; bonusPts('Tròn 69 giây thiền định'); }
   if(medAcc<.1) return; medAcc=0;
+  const mm=String(Math.floor(el/60)).padStart(2,'0')+':'+String(Math.floor(el%60)).padStart(2,'0');
+  if(bead){
+    $('#medRing').style.transform=`scale(${(.6+.5*Math.max(0,1-beadBeat/BEAD_BEAT*2.2)).toFixed(3)})`;
+    if($('#medTxt').textContent!=='📿 Lần tràng hạt') $('#medTxt').textContent='📿 Lần tràng hạt';
+    $('#medTime').textContent=mm+' · +'+MY.sitPts+' · '+(beadN%108)+'/108 hạt'; return;
+  }
   const ph=el%10,inh=ph<4,k=inh?ph/4:1-(ph-4)/6;
   $('#medRing').style.transform=`scale(${(.6+.55*k).toFixed(3)})`;
   const txt=inh?'Hít vào…':'Thở ra…'; if($('#medTxt').textContent!==txt) $('#medTxt').textContent=txt;
-  $('#medTime').textContent=String(Math.floor(el/60)).padStart(2,'0')+':'+String(Math.floor(el%60)).padStart(2,'0')+' · +'+MY.sitPts;
+  $('#medTime').textContent=mm+' · +'+MY.sitPts;
   const m=Math.floor(el/60); if(m>medMin){ medMin=m; Snd.bell(.2,true); }
 }
 let wasHall=false,hallBellT=0;
 function hallUpdate(dt){                                // vào/ra chánh điện: tắt/mở âm thanh nền; trong điện thỉnh thoảng có tiếng chuông ngân
   const ih=inHall(MY.x,MY.z);
   if(ih!==wasHall){ wasHall=ih; Snd.setHall(ih); hallBellT=rnd(2.5,5); }
-  if(ih){ hallBellT-=dt; if(hallBellT<=0){ hallBellT=rnd(20,32); Snd.bell(.22,true); } }
+  if(ih){ hallBellT-=dt; if(hallBellT<=0){ hallBellT=rnd(20,32); if(MY.sit<100) Snd.bell(.22,true); } }       // đang lần tràng hạt đã có chuông riêng: nghỉ chuông ngẫu nhiên
 }
 
 /* ===== 10c. ĐIỂM BÌNH AN · THĂNG CẤP · CHÀO KÍNH · BẢNG XẾP HẠNG =====
    Nguồn điểm: thắp hương (1 nén +3, 3 nén +10, tính 15 giây một lần) · thỉnh chuông và gõ mõ theo độ chính xác khi chạm
-   (≥90% +3 · 70–90% +2 · dưới 70% +1 · lệch quá xa, dưới 40%, không tính) · ngồi thiền (+1 mỗi 5 giây) ·
+   (≥90% +3 · 70–90% +2 · dưới 70% +1 · lệch quá xa, dưới 40%, không tính) · thiền định (+1 mỗi 5 giây) ·
    thưởng ngẫu nhiên 1–30 điểm khi ngồi đúng bồ đoàn may mắn (ẩn, đổi sau mỗi lần trúng) hoặc ngồi tròn 69 giây. */
 function accOf(ms){ ms=Math.abs(ms); if(ms<95) return 100-ms/95*10; if(ms<190) return 90-(ms-95)/95*20; if(ms<300) return 70-(ms-190)/110*30; return Math.max(0,40-(ms-300)/60*40); }
 const ptsOf=acc=>acc>=90?3:acc>=70?2:acc>=40?1:0;
@@ -1737,12 +1959,12 @@ function openRank(){
   const load=()=>{ const b=$('#lbBox'); if(b) b.innerHTML='<p class="small">Đang tải…</p>'; Net.lb(show); };
   $('#lbx').onclick=()=>closeModal(); $('#lbr').onclick=load; load();
 }
-/* ===== 10d. MANA (SỨC KHỎE) · ĂN Ở NHÀ HÀNG CHAY TỊNH TÂM · TƯƠNG TÁC GIỮA NGƯỜI CHƠI =====
+/* ===== 10d. MANA (SỨC KHỎE) · ĂN Ở Quán chay Thôi Kệ · TƯƠNG TÁC GIỮA NGƯỜI CHƠI =====
    Mana 0–100 (mặc định 100), lưu trên máy.
    Tiêu hao: đi bộ −1 mana mỗi 10 giây di chuyển · gõ chuông / gõ mõ −10 mana mỗi 10 giây (−1 mỗi giây khi trò chơi đang mở).
-   Hồi: ngồi thiền +1 mana mỗi 20 giây · ăn món chay +10–50 mana (ngẫu nhiên mỗi món).
+   Hồi: thiền định +1 mana mỗi 20 giây · ăn món chay +10–50 mana (ngẫu nhiên mỗi món).
    Hết mana (dưới 1, đói bụng): chưa làm được các hoạt động (thắp hương, chuông, mõ, xăm, lời cầu) và đi chậm lại;
-   vẫn ngồi thiền (hồi chậm) và đi ăn được. Ăn: gọi liên tiếp 2 món; nếu chưa đầy mana thì chờ 10 giây mới gọi tiếp; mana đầy thì no, không gọi thêm.
+   vẫn thiền định (hồi chậm) và đi ăn được. Ăn: gọi liên tiếp 2 món; nếu chưa đầy mana thì chờ 10 giây mới gọi tiếp; mana đầy thì no, không gọi thêm.
    Tương tác (chỉ ngoài chánh điện, trong 2,4 m, cả hai không bật "yên tĩnh"): gõ đầu (mình −10, người bị −20),
    ký đầu (−15 / −25), cắn (+1 / −10). Máy chủ chỉ kiểm tra khoảng cách / chánh điện / tốc độ rồi chuyển tiếp; mana do mỗi máy tự tính. */
 const MANA_MAX=100;
@@ -1759,42 +1981,46 @@ function manaUI(){
     const t=hintTarget(),dx=t.x-MY.x,dz=t.z-MY.z,dist=Math.round(Math.hypot(dx,dz)),f=[-Math.sin(yaw),-Math.cos(yaw)],r=[Math.cos(yaw),-Math.sin(yaw)];
     const ang=Math.atan2(r[0]*dx+r[1]*dz,f[0]*dx+f[1]*dz);
     $('#hArrow').style.transform=`rotate(${ang.toFixed(2)}rad)`;
-    $('#hTxt').textContent=(hungry()?'Đói bụng! Đi ăn ở Nhà Hàng Tịnh Tâm':'Nhà Hàng Tịnh Tâm')+' · '+dist+' m';
+    $('#hTxt').textContent=(hungry()?'Đói bụng! Đi ăn ở Quán Chay Thôi Kệ':'Quán Chay Thôi Kệ')+' · '+dist+' m';
   }
 }
 function manaUpdate(dt){
   if(!inGame) return;
   if(MY.moving) manaAdd(-.1*dt);                                           // đi bộ: 1 mana mỗi 10 giây
   if(actDrain&&modalOpen){ manaAdd(-1*dt);                                  // gõ chuông / gõ mõ: 10 mana mỗi 10 giây
-    if(D.mana<1){ D.mana=0; manaDirty=true; actDrain=false; closeModal(); toast('😮‍💨 Bạn hết mana rồi! Hãy đi ăn ở Nhà Hàng Chay Tịnh Tâm (bên phải chùa) hoặc ngồi thiền để hồi sức.'); } }
+    if(D.mana<1){ D.mana=0; manaDirty=true; actDrain=false; closeModal(); toast('😮‍💨 Bạn hết mana rồi! Hãy đi ăn ở Quán chay Thôi Kệ (bên phải chùa) hoặc thiền định để hồi sức.'); } }
   mUiT+=dt; if(Math.floor(D.mana+1e-6)!==manaShown||mUiT>.4){ mUiT=0; manaUI(); }
   mSaveT+=dt; if(manaDirty&&mSaveT>2){ mSaveT=0; manaDirty=false; Store.save(); }
 }
 function openMana(){
   openModal(`<h2>❤ Mana (sức khỏe)</h2><div class="stat"><div><b>${Math.floor(D.mana+1e-6)}</b>mana hiện có (tối đa 100)</div></div>
-  <div class="rule">• Đi bộ: −1 mana mỗi 10 giây<br>• Gõ chuông / gõ mõ: −10 mana mỗi 10 giây<br>• Ngồi thiền: +1 mana mỗi 20 giây<br>• Ăn ở <b>Nhà Hàng Chay Tịnh Tâm</b> (bên phải chùa, qua cổng phía đông): gọi món, bê ra bàn ngồi ăn 5 giây rồi +10–50 mana; gọi liên tiếp 2 món, chưa đầy mana thì chờ 10 giây<br>• Hết mana: chưa làm được các hoạt động (vẫn ngồi thiền và đi ăn được)<br>
-  <br><b>Tương tác</b> với người chơi khác (ngoài chánh điện, trong 2,4 m):<br>• 🔨 Gõ đầu: bạn −10, người bị gõ −20<br>• 👊 Ký đầu: bạn −15, người bị ký −25<br>• 🦷 Cắn: bạn +1, người bị cắn −10</div>
+  <div class="rule">• Đi bộ: −1 mana mỗi 10 giây<br>• Gõ chuông / gõ mõ: −10 mana mỗi 10 giây<br>• Thiền Định / lần tràng hạt: +1 mana mỗi 20 giây<br>• Ăn ở <b>Quán chay Thôi Kệ</b> (bên phải chùa, qua cổng phía đông): gọi món, bê ra bàn ngồi ăn 5 giây rồi +10–50 mana; gọi liên tiếp 2 món, chưa đầy mana thì chờ 10 giây<br>• Hết mana: chưa làm được các hoạt động (vẫn Thiền Định, lần tràng hạt và đi ăn được)<br>
+  <br><b>Tương tác</b> với người chơi khác (ngoài chánh điện, trong 2,4 m):<br>• 🔨 Gõ đầu: bạn −10, người bị gõ −20<br>• 👊 Ký đầu: bạn −15, người bị ký −25<br>• 🐍 Cắn: bạn +1, người bị cắn −10</div>
   <div class="row"><button class="btn alt" id="qtBtn"></button></div><p class="small" id="qtNote"></p>
   <div class="row"><button class="btn" data-closable id="mnx">Đóng</button></div>`);
   const upd=()=>{ $('#qtBtn').textContent=D.quiet?'🤫 Chế độ yên tĩnh: ĐANG BẬT':'🤫 Chế độ yên tĩnh: tắt'; $('#qtNote').textContent=D.quiet?'Bạn không nhận và cũng không gửi được tương tác. Chạm để tắt.':'Bật để không ai gõ đầu, ký đầu hay cắn bạn (và bạn cũng không tương tác với ai).'; };
   upd(); $('#qtBtn').onclick=()=>{ D.quiet=!D.quiet; Store.save(); Net.quiet(D.quiet); upd(); iaUpdate(1,performance.now()/1000); };
   $('#mnx').onclick=()=>closeModal();
 }
-/* ----- ăn ở Nhà Hàng Chay Tịnh Tâm: gọi món → bê khay ra bàn → ngồi ăn 5 giây → hồi mana -----
+/* ----- ăn ở Quán chay Thôi Kệ: gọi món → bê khay ra bàn → ngồi ăn 5 giây → hồi mana -----
    Mana chỉ tăng SAU khi ăn xong (5 giây thời gian chơi thật, không tính lúc tab bị ẩn). Gọi liên tiếp 2 món (món sau gọi trong vòng 15 giây
    kể từ lúc ăn xong món trước); ăn xong món thứ 2 mà mana chưa đầy thì phải chờ 10 giây mới gọi tiếp. Khi nhân vật đang bê khay / ngồi ăn
    thì tự đi (đường đi tránh bàn, quầy, hàng rào) và chưa làm được việc khác. */
 const EAT_SECS=5;
 let eatStreak=0,eatLast=-99,eatLockUntil=0;
 function actEat(){
-  const items=MENU.map((m,i)=>`<button class="dish" data-i="${i}"><span class="de">${m[0]}</span>${esc(m[1])}</button>`).join('');
-  openModal(`<h2>🍜 Nhà Hàng Chay Tịnh Tâm</h2><p class="sub">Chọn món, bê ra bàn ngồi ăn <b>${EAT_SECS} giây</b> rồi hồi <b>10–50 mana</b> (ngẫu nhiên). Gọi liên tiếp được 2 món; chưa đầy mana thì chờ 10 giây mới gọi tiếp.</p><div class="mnrow">Mana: <b id="emn"></b>/100</div><div class="menu" id="menuG">${items}</div><div class="judge" id="eatMsg" style="font-size:15px"></div><div class="row"><button class="btn alt" data-closable id="ex">Xong</button></div>`);
-  const btns=[...document.querySelectorAll('#menuG .dish')];
+  const slot=menuSlot(),cats=catsNow(); let cur=cats[0][0];
+  openModal(`<h2>🍜 Quán chay Thôi Kệ</h2><p class="sub">${slot==='am'?'🕒 Menu buổi sáng (bán đến 16:00)':'🕓 Menu chiều – tối (bán từ 16:00)'} · bê ra bàn ngồi ăn <b>${EAT_SECS} giây</b> rồi hồi <b>10–50 mana</b>. Gọi liên tiếp được 2 món; chưa đầy mana thì chờ 10 giây.</p><div class="tabs" id="eTabs"></div><div class="mnrow">Mana: <b id="emn"></b>/100</div><div class="menu" id="menuG"></div><div class="judge" id="eatMsg" style="font-size:15px"></div><div class="row"><button class="btn alt" data-closable id="ex">Xong</button></div>`);
+  const tabs=$('#eTabs'),grid=$('#menuG');
   const upd=()=>{ const now=performance.now()/1000,lock=Math.max(0,eatLockUntil-now),full=D.mana>=MANA_MAX-.001;
-    $('#emn').textContent=Math.floor(D.mana+1e-6); btns.forEach(b=>b.disabled=lock>0||full);
+    $('#emn').textContent=Math.floor(D.mana+1e-6); grid.querySelectorAll('.dish').forEach(b=>b.disabled=lock>0||full);
     $('#eatMsg').textContent=full?'Bạn no rồi, mana đã đầy 🙏':lock>0?`Chờ ${Math.ceil(lock)} giây nữa mới gọi món tiếp ⏳`:(eatStreak===1&&now-eatLast<=15?'Còn 1 món được gọi liền không phải chờ':''); };
-  const iv=setInterval(upd,250); upd(); cleanup=()=>clearInterval(iv);
-  btns.forEach(b=>b.onclick=()=>eatDish(+b.dataset.i)); $('#ex').onclick=()=>closeModal();
+  const draw=()=>{
+    tabs.innerHTML=cats.map(c=>`<button type="button" data-c="${c[0]}" class="${c[0]===cur?'on':''}">${esc(c[1])}</button>`).join('');
+    grid.innerHTML=MENU.map((m,i)=>[m,i]).filter(([m])=>m[2]===cur&&(m[3]==='all'||m[3]===slot)).map(([m,i])=>`<button class="dish" data-i="${i}"><span class="de">${m[0]}</span>${esc(m[1])}</button>`).join('');
+    tabs.querySelectorAll('button').forEach(b=>b.onclick=()=>{ cur=b.dataset.c; draw(); upd(); });
+    grid.querySelectorAll('.dish').forEach(b=>b.onclick=()=>eatDish(+b.dataset.i)); };
+  const iv=setInterval(upd,250); draw(); upd(); cleanup=()=>clearInterval(iv); $('#ex').onclick=()=>closeModal();
 }
 /* tìm đường đi bộ trên lưới 0,5 m (tránh bàn, quầy, hàng rào, chậu cây) cho người bê khay */
 let _eg=null;
@@ -1821,7 +2047,7 @@ function eseatFree(i){ const e=ESEATS[i]; if(!e||e.used) return false;
   return true; }
 function pickEatSeat(){ let bi=-1,bd=1e9; for(let i=0;i<ESEATS.length;i++){ if(!eseatFree(i)) continue; const e=ESEATS[i],d=Math.hypot(e.x-MY.x,e.z-MY.z); if(d<bd){ bd=d; bi=i; } } return bi; }
 function eatDish(i){
-  const now=performance.now()/1000; if(now<eatLockUntil||D.mana>=MANA_MAX-.001||!MENU[i]||MY.eat) return;
+  const now=performance.now()/1000; if(now<eatLockUntil||D.mana>=MANA_MAX-.001||!menuOk(i)||MY.eat) return;
   closeModal(); startMeal(i);
 }
 function mealUI(txt,time){ $('#med').classList.remove('hidden'); $('#medTxt').textContent=txt; $('#medTime').textContent=time; }
@@ -1867,7 +2093,7 @@ function finishMeal(){
 }
 
 /* ----- tương tác giữa người chơi (qua máy chủ chùa) ----- */
-const IA={knock:{n:'Gõ đầu',e:'🔨',me:-10,them:-20},thump:{n:'Ký đầu',e:'👊',me:-15,them:-25},bite:{n:'Cắn',e:'🦷',me:1,them:-10}};
+const IA={knock:{n:'Gõ đầu',e:'🔨',me:-10,them:-20},thump:{n:'Ký đầu',e:'👊',me:-15,them:-25},bite:{n:'Cắn',e:'🐍',me:1,them:-10}};
 const IA_RANGE=2.4;
 let iaTarget=null,iaCool=0,iaT=0,iaPend=0;
 function flyAt(x,y,z,txt){ _bv.set(x,y,z).project(camera); if(_bv.z>1) return; const d=document.createElement('div'); d.className='fly'; d.style.left=((_bv.x*.5+.5)*innerWidth).toFixed(0)+'px'; d.style.top=((-_bv.y*.5+.5)*innerHeight).toFixed(0)+'px'; d.textContent=txt; $('#hud').appendChild(d); setTimeout(()=>d.remove(),1400); }
@@ -1906,9 +2132,9 @@ const toastEl=$('#toast'); let toastT=0;
 function toast(s){ toastEl.textContent=s; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),2600); }
 function shakeScreen(){ const st=$('#stage'); st.classList.remove('shake'); void st.offsetWidth; st.classList.add('shake'); if(navigator.vibrate) navigator.vibrate(70); }
 window.__close=()=>closeModal();
-function runSpot(s){ if(!s||modalOpen||MY.eat) return; if(s.id==='sit'){ startSit(s.seat); return; } if(s.id==='stand'){ standUp(); return; }
-  if(hungry()&&s.id!=='eat'){ toast('🍽 Bạn đói rồi (hết mana): chưa làm được việc này. Hãy đi ăn ở Nhà Hàng Chay Tịnh Tâm bên phải chùa, hoặc ngồi thiền để hồi mana.'); return; }
-  faceSpot(s); ({incense:actIncense,bell:actBell,mok:actMok,wish:actWish,xam:actXam,eat:actEat})[s.id](); tutDone3(); }
+function runSpot(s){ if(!s||modalOpen||MY.eat) return; if(s.id==='sit'){ startSit(s.seat); return; } if(s.id==='bead'){ startBead(s.seat); return; } if(s.id==='stand'){ standUp(); return; }
+  if(hungry()&&s.id!=='eat'){ toast('🍽 Bạn đói rồi (hết mana): chưa làm được việc này. Hãy đi ăn ở Quán chay Thôi Kệ bên phải chùa, hoặc thiền định để hồi mana.'); return; }
+  faceSpot(s); ({incense:actIncense,bell:actBell,mok:actMok,wish:actWish,xam:actXam,eat:actEat,loc:actLoc})[s.id](); tutDone3(); }
 
 /* 11.1 Thắp hương: chọn 1 hoặc 3 nén, chắp tay, cắm hương, khói bay, đầu nén đỏ cháy dần */
 function actIncense(){
@@ -2062,9 +2288,17 @@ function tutDone3(){ if(tutStep===2) tutShow(3); }
 $('#tutNext').onclick=()=>tutShow(tutStep+1); $('#tutSkip').onclick=()=>{ tutEl.classList.add('hidden'); tutStep=-1; D.tutDone=true; Store.save(); };
 
 /* chọn trang phục */
-let robeKey=D.robe==='nau'?'nau':'lam';
-document.querySelectorAll('.robe').forEach(b=>{ b.classList.toggle('on',b.dataset.robe===robeKey); b.onclick=()=>{ robeKey=b.dataset.robe; document.querySelectorAll('.robe').forEach(x=>x.classList.toggle('on',x===b)); me.setRobe(robeKey); }; });
-me.setRobe(robeKey);
+let robeKey=ROBE_ROLE[D.robe]?D.robe:'lam',role=ROBE_ROLE[robeKey];
+const ROLE_DEF={phat:'lam',visit:'dq'};
+function syncRobes(){
+  document.querySelectorAll('#roleSeg button').forEach(b=>b.classList.toggle('on',b.dataset.role===role));
+  document.querySelectorAll('.robe').forEach(b=>{ b.classList.toggle('hidden',b.dataset.role!==role); b.classList.toggle('on',b.dataset.robe===robeKey); });
+  $('#robeBox').classList.toggle('v3',role==='visit');
+}
+document.querySelectorAll('#roleSeg button').forEach(b=>b.onclick=()=>{ role=b.dataset.role; if(ROBE_ROLE[robeKey]!==role) robeKey=ROLE_DEF[role]; me.setRobe(robeKey); syncRobes(); });
+document.querySelectorAll('.robe').forEach(b=>b.onclick=()=>{ robeKey=b.dataset.robe; me.setRobe(robeKey); syncRobes(); });
+me.setRobe(robeKey); syncRobes();
+{ const t=new Date(),pad=n=>String(n).padStart(2,'0'); $('#nowTxt').textContent=`🕒 Bây giờ là ${phaseName(clockHour())} (${pad(t.getHours())}:${pad(t.getMinutes())}).`; }
 /* giới tính + kiểu tóc: nam tóc ngắn; nữ chọn ngang vai / dài ngang lưng / búi (ngẫu nhiên giữa 2 kiểu búi) / ngẫu nhiên. Chỉ khác ở tóc. */
 let gender=D.gender==='f'?'f':'m',hairPick=['shoulder','long','bun','rand'].includes(D.hairPick)?D.hairPick:'rand';
 function resolveHair(){ if(gender==='m') return 0; if(hairPick==='shoulder') return 1; if(hairPick==='long') return 2; if(hairPick==='bun') return pick([3,4]); return pick([1,2,3,4]); }
@@ -2134,14 +2368,15 @@ function feed(s){                                           // thông báo nhẹ
 function decayMsg(i){ return `⏳ Bạn vắng mặt khoảng ${i.hours} giờ nên điểm bình an giảm ${i.pct}% (${fmt(i.before)} → ${fmt(i.after)}). Ghé chùa đều đặn để giữ điểm nhé.`; }
 if(decayInfo){ const n=$('#decayNote'); n.textContent=decayMsg(decayInfo); n.classList.remove('hidden'); }
 restoreWishes(); rankUI(); manaUI();
-applyTod(); onResize(); renderer.render(scene,camera);
+clockSolve(); applyTod(); onResize(); renderer.render(scene,camera);
 btnEnter.disabled=false; btnEnter.textContent='Vào chùa'; btnEnter.onclick=enterTemple; $('#werr').textContent=''; window.__ready=true; document.body.classList.add('ready');
 
 /* Vòng lặp chính (không tạo đối tượng mới trong mỗi khung hình) */
-const clock=new THREE.Clock(); let T=0,playT=0; const qs=new URLSearchParams(location.search);
+const clock=new THREE.Clock(); let T=0,playT=0,clockT=0; const qs=new URLSearchParams(location.search);
 if(qs.has('tod')){ todForce=clamp(+qs.get('tod'),0,1); }
+if(qs.has('hour')){ hourForce=clamp(+qs.get('hour'),0,24); }
 function update(dt){
-  T+=dt; if(inGame){ playT+=dt; } tod=todForce!==null?todForce:clamp(playT*todSpeed,0,1); applyTod();
+  T+=dt; if(inGame){ playT+=dt; } clockT-=dt; if(clockT<=0){ clockT=1; clockSolve(); drawMenuBoard(); } applyTod();
   if(inGame){ updatePlayer(dt,performance.now()/1000); hallUpdate(dt); medUpdate(dt,performance.now()/1000); manaUpdate(dt); iaUpdate(dt,performance.now()/1000); }
   aiUpdate(dt,T); remoteUpdate(dt); incUpdate(dt); smokeUpdate(dt,T,burning()); fxUpdate(dt,T); ribUpdate(T); lampUpdate(dt,T); bellUpdate(dt); wishTagUpdate(dt,T); chefUpdate(dt);
   for(const s of SPOTS){ s.mesh.scale.setScalar(1+Math.sin(T*3+s.x)*.08+(s===curSpot?.25:0)); }
@@ -2155,7 +2390,7 @@ function frame(){
   if(!window.__noRender) renderer.render(scene,camera);
 }
 frame();
-if(qs.has('debug')) window.__game={startMeal,eatStep,pickEatSeat,findPath,eseatFree,EAT_SECS,robeMats,ROBES_A,ROBES_E,decayPct,applyDecay,touchSeen,getDecay:()=>decayInfo,feed,wishTags,onWishRemote,onWishSync,wishLayout,tagTarget,WPLACE,REST,ESEATS,MENU,IA,chef,hungry,manaAdd,actEat,eatDish,openMana,iaUpdate,eatState:()=>({eatStreak,eatLockUntil,eatLast}),setEat:(a,b,c)=>{eatStreak=a;eatLockUntil=b;eatLast=c;},LV,D,addPts,promote,rankUI,openRank,wishTags,wishCanvas,accOf,ptsOf,lvOfPts,me,bowAt,setLucky:i=>{luckySeat=i},getLucky:()=>luckySeat,camFocusState:()=>camFocus,SEATS,inHall,startSit,standUp,seatFree,Snd,sim:(sec,dt=.033)=>{for(let t=0;t<sec;t+=dt)update(dt);},keys,MY,agents,Net,SPOTS,COL,inc,runSpot,actBell,actMok,actWish,actXam,actIncense,openBook,openShare,spawnGroup,scene,camera,renderer,get tod(){return tod},setYaw:v=>{yaw=v},setPitch:v=>{pitch=v},setDist:v=>{dist=v},tp:(x,z)=>{MY.x=x;MY.z=z;me.root.position.set(x,0,z);camPos.set(x,6,z+9);},remotes,get ptMats(){return ptMats}};
+if(qs.has('debug')) window.__game={BSEATS,startBead,nearBSeat,bseatFree,CATS,menuSlot,menuOk,catsNow,drawMenuBoard,lifePath,personalDay,LOCS,NUM_LIFE,NUM_DAY,locPick,locNum,actLoc,LOCZ,ROBE_ROLE,get dayW(){return dayW},get warmW(){return warmW},setHour:h=>{hourForce=h;clockSolve();},clockSolve,phaseName,PAL,skyU,hemi,sun,fogCol,lights,glow,lanternMat,startMeal,eatStep,pickEatSeat,findPath,eseatFree,EAT_SECS,robeMats,ROBES_A,ROBES_E,decayPct,applyDecay,touchSeen,getDecay:()=>decayInfo,feed,wishTags,onWishRemote,onWishSync,wishLayout,tagTarget,WPLACE,REST,ESEATS,MENU,IA,chef,hungry,manaAdd,actEat,eatDish,openMana,iaUpdate,eatState:()=>({eatStreak,eatLockUntil,eatLast}),setEat:(a,b,c)=>{eatStreak=a;eatLockUntil=b;eatLast=c;},LV,D,addPts,promote,rankUI,openRank,wishTags,wishCanvas,accOf,ptsOf,lvOfPts,me,bowAt,setLucky:i=>{luckySeat=i},getLucky:()=>luckySeat,camFocusState:()=>camFocus,SEATS,inHall,startSit,standUp,seatFree,Snd,sim:(sec,dt=.033)=>{for(let t=0;t<sec;t+=dt)update(dt);},keys,MY,agents,Net,SPOTS,COL,inc,runSpot,actBell,actMok,actWish,actXam,actIncense,openBook,openShare,spawnGroup,scene,camera,renderer,get tod(){return tod},setYaw:v=>{yaw=v},setPitch:v=>{pitch=v},setDist:v=>{dist=v},tp:(x,z)=>{MY.x=x;MY.z=z;me.root.position.set(x,0,z);camPos.set(x,6,z+9);},remotes,get ptMats(){return ptMats}};
 </script>
 </body>
 </html>
