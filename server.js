@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 /* =====================================================================
-   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 5.7
+   LÊN CHÙA CẦU AN — máy chủ trung chuyển (relay) · mod by mrwick68 · phiên bản 6.0
    - Không cần cài thư viện: chỉ cần Node.js >= 18.  Chạy:  node server.js
    - Một cổng duy nhất:
        GET  /              -> index.html (nén gzip, có ETag)
@@ -10,7 +10,7 @@
        WS   /ws            -> kênh chơi online
    - Giao thức WebSocket (JSON):
        client -> {t:'hello',v:5,id,u,q,k,room,n,r,h,l,p,x,z,y,a}   (bắt buộc đầu tiên, trong 5 giây)
-                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..17 (17 = Chân Tu), p = điểm bình an, a = dáng 0..17 (9 thiền định, 10 cúi chào, 11 ngồi ăn, 12 gõ đầu, 13 ký đầu, 14 cắn, 15 bê khay, 16 lần tràng hạt, 17 uống nước), r = màu áo: lam | nau (Phật tử) · dq | trang | vang (người tham quan), q = chế độ yên tĩnh 0/1, k = điểm cao nhất từng đạt (để giữ bậc khi điểm xếp hạng giảm)
+                 u = mã ẩn danh ngẫu nhiên của người chơi, h = kiểu tóc 0..4, l = bậc 0..17 (17 = Chân Tu), p = điểm bình an, a = dáng 0..26 (9 thiền định, 10 cúi chào, 11 ngồi ăn, 12 gõ đầu, 13 ký đầu, 14 cắn, 15 bê khay, 16 lần tràng hạt, 17 uống nước, 18 bê ly nước, 19 ngồi uống nước, 20–25 cầm hoa (6 màu), 26 tưới hoa), r = màu áo: lam | nau (Phật tử) · dq | trang | vang (người tham quan), q = chế độ yên tĩnh 0/1, k = điểm cao nhất từng đạt (để giữ bậc khi điểm xếp hạng giảm)
        client -> {t:'s',x,z,y,a} | {t:'sc',l,p,k} | {t:'w',k,x} | {t:'lb'} | {t:'ia',to,k} | {t:'cq',to} | {t:'cr',to,ok} | {t:'cm',x} | {t:'cx'} | {t:'qt',v} | {t:'ping',ts} | {t:'e',k:'bell'} | {t:'bye'}
        server -> {t:'welcome',room,peers:[...],wishes:[[kind,text,mine,tuổi_giây],...]} | {t:'join',p} | {t:'leave',id}
                  {t:'w',k,x} (lời cầu an của người khác: k = ribbon|lantern, x = nội dung) | {t:'wa',ok:0,why} (lời cầu của bạn không được chia sẻ)
@@ -67,7 +67,7 @@ const lvOfP = p => { let l = 0; for (let i = 0; i < LVP.length; i++) if (p >= LV
 
 /* ---------- 2. Tiện ích ---------- */
 const clampN = (v, a, b) => { const n = Number(v); return Number.isFinite(n) ? Math.round(Math.min(b, Math.max(a, n)) * 100) / 100 : 0; };
-const poseOf = a => { const n = a | 0; return n >= 0 && n <= 17 ? n : 0; };
+const poseOf = a => { const n = a | 0; return n >= 0 && n <= 26 ? n : 0; };
 const hairOf = h => { const n = Math.round(Number(h)); return Number.isFinite(n) && n >= 0 && n <= 4 ? n : 0; };
 const ptsOf = p => { const n = Math.round(Number(p)); return Number.isFinite(n) ? Math.min(1e6, Math.max(0, n)) : 0; };
 const lvOf = (l, p, k = 0) => { const n = Math.round(Number(l)); return Math.min(Number.isFinite(n) ? Math.min(17, Math.max(0, n)) : 0, lvOfP(Math.max(p, k))); };   // bậc không thể cao hơn điểm cao nhất từng đạt
@@ -191,7 +191,7 @@ class Conn {
   constructor(sock, ip) {
     this.sock = sock; this.ip = ip; this.buf = Buffer.alloc(0); this.fragOp = 0; this.frag = []; this.fragLen = 0;
     this.lastRx = Date.now(); this.tokens = 60; this.tokT = Date.now(); this.drops = 0;
-    this.id = ''; this.u = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.l = 0; this.p = 0; this.x = 0; this.z = 19; this.y = 0; this.a = 0; this.lastEv = 0; this.lastSc = 0; this.lastLb = 0; this.lastIa = 0; this.hits = []; this.q = 0; this.pk = 0; this.lastW = 0; this.chat = null; this.pend = null; this.incoming = null; this.lastCq = 0; this.lastCm = 0;
+    this.id = ''; this.u = ''; this.room = null; this.n = 'Khách'; this.r = 'lam'; this.h = 0; this.l = 0; this.p = 0; this.x = 0; this.z = 41.5; this.y = 0; this.a = 0; this.lastEv = 0; this.lastSc = 0; this.lastLb = 0; this.lastIa = 0; this.hits = []; this.q = 0; this.pk = 0; this.lastW = 0; this.chat = null; this.pend = null; this.incoming = null; this.lastCq = 0; this.lastCm = 0;
     this.closed = false; this.cleaned = false;
     this.helloT = setTimeout(() => this.close(4001), 5000);       // phải gửi hello trong 5 giây
     sock.on('data', d => { try { this.onData(d); } catch (e) { this.close(1011); } });
@@ -253,7 +253,7 @@ class Conn {
   handle(m) {
     const t = m.t;
     if (!this.room) { if (t === 'hello') this.hello(m); return; }
-    if (t === 's') { this.x = clampN(m.x, -60, 60); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a); this.room.dirty.add(this); if (this.chat) this.chatCheck(); }
+    if (t === 's') { this.x = clampN(m.x, -60, 60); this.z = clampN(m.z, -80, 64); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a); this.room.dirty.add(this); if (this.chat) this.chatCheck(); }
     else if (t === 'ping') this.send(JSON.stringify({ t: 'pong', ts: Number(m.ts) || 0 }));
     else if (t === 'sc') {                                          // báo điểm / bậc mới (tối đa ~3 lần mỗi giây; máy khách tự gộp lại)
       const now = Date.now(); if (now - this.lastSc < 300) return; this.lastSc = now;
@@ -354,7 +354,7 @@ class Conn {
       }
       boardSet(this.u, this.n, this.p, this.l, this.pk);
     }
-    this.x = clampN(m.x, -60, 60); this.z = clampN(m.z, -34, 40); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a);
+    this.x = clampN(m.x, -60, 60); this.z = clampN(m.z, -80, 64); this.y = clampN(m.y, -7, 7); this.a = poseOf(m.a);
     const name = typeof m.room === 'string' && ROOM_RE.test(m.room.toLowerCase()) ? m.room.toLowerCase() : '';
     const room = assignRoom(name, this.id);
     if (!room) { this.send(JSON.stringify({ t: 'full' })); return this.close(4002); }
@@ -414,7 +414,7 @@ const server = http.createServer((req, res) => {
   res.setHeader('X-Content-Type-Options', 'nosniff'); res.setHeader('Referrer-Policy', 'no-referrer');
   if (url === '/health') {
     res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
-    return res.end(JSON.stringify({ ok: true, v: 5.7, wishRooms: wishStore.size, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
+    return res.end(JSON.stringify({ ok: true, v: 6.0, wishRooms: wishStore.size, uptime: Math.round(process.uptime()), clients: clients.size, rooms: rooms.size, board: board.size, maxRoom: MAX_ROOM, rssMB: Math.round(process.memoryUsage().rss / 1048576) }));
   }
   if (url === '/favicon.ico') { res.writeHead(204); return res.end(); }
   const name = FILES[url];
@@ -449,7 +449,7 @@ server.on('clientError', (e, s) => { try { s.destroy(); } catch (_) { } });
 
 server.listen(PORT, HOST, () => {
   const a = server.address();
-  log(`Chùa An Lạc relay v5.7 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
+  log(`Chùa An Lạc relay v6.0 đang chạy tại http://${HOST === '0.0.0.0' ? 'localhost' : HOST}:${a.port}  (WebSocket: /ws, kiểm tra: /health) · bảng xếp hạng: ${board.size} người`);
   if (!fs.existsSync(path.join(ROOT, 'index.html'))) log('CẢNH BÁO: chưa thấy index.html trong', ROOT);
 });
 function shutdown() {
