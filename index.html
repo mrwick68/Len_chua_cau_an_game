@@ -177,12 +177,12 @@ body.ready .stuck{display:none}
 <div id="welcome">
  <div class="card">
   <h1 class="title">Lên Chùa Cầu An</h1>
-  <p class="sub">Một chuyến dạo chùa nhẹ nhàng. Giờ trong game theo giờ máy của bạn: sáng, trưa, chiều, tối. <span id="nowTxt"></span><br>Không đăng nhập, không quảng cáo, không công đức bằng tiền.</p>
+  <p class="sub">Một chuyến dạo chùa nhẹ nhàng.<span id="nowTxt"></span><br>Không đăng nhập, không quảng cáo, chơi vui thôi nhe các bạn.</p>
   <input id="name" class="field" maxlength="18" autocomplete="off" placeholder="Nhập tên của bạn để vào chùa">
   <div class="lbl">Bạn đến chùa với tư cách</div>
     <div class="seg two" id="roleSeg">
-     <button type="button" data-role="phat" class="on">🙏 Phật tử<br><span class="small">áo lam · áo nâu sòng</span></button>
-     <button type="button" data-role="visit">🧳 Người tham quan<br><span class="small">dạ quang · trắng · vàng</span></button>
+     <button type="button" data-role="phat" class="on">🙏Phật tử<br><span class="small">áo lam · áo nâu sòng</span></button>
+     <button type="button" data-role="visit">Người tham quan<br><span class="small">dạ quang · trắng · vàng</span></button>
     </div>
     <div class="lbl">Màu áo</div>
     <div class="robes" id="robeBox">
@@ -216,7 +216,7 @@ body.ready .stuck{display:none}
   <p class="small" style="margin-top:10px">Lần chạm này cũng sẽ bật âm thanh nền. Không nghe thấy gì trên iPhone? Gạt công tắc im lặng bên hông máy về chế độ có chuông và tăng âm lượng.</p>
   <p id="stuck" class="stuck">Nút vẫn chưa đổi thành “Vào chùa”? Có thể bạn đang mở file trong khung xem trước (Files, Zalo, Teams, Copilot…), nơi thường chặn JavaScript. Hãy mở link bằng <b>Safari</b> hoặc <b>Chrome</b>.</p>
   <noscript><p class="stuck" style="opacity:1;max-height:none;margin:10px 0 0;padding:8px 10px;animation:none">Trình duyệt đang tắt JavaScript nên game không chạy được. Hãy mở bằng Safari hoặc Chrome.</p></noscript>
-  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.6 · mod by mrwick68</p>
+  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.6 · created by mrwick68</p>
  </div>
 </div>
 
@@ -277,7 +277,7 @@ body.ready .stuck{display:none}
 
 <script type="module">
 /* =====================================================================
-   LÊN CHÙA CẦU AN — mod by mrwick68
+   LÊN CHÙA CẦU AN — created by mrwick68
    Một file duy nhất. Three.js (CDN) + Web Audio + Canvas, không tài nguyên ngoài.
    Mục lục: 0 Nạp Three · 1 Tiện ích/Lưu · 2 Bộ lọc từ · 3 Âm thanh · 4 Cảnh & ánh sáng
             5 Kiến trúc chùa · 6 Hiệu ứng (hương, khói, đom đóm…) · 7 Nhân vật
@@ -306,7 +306,7 @@ async function loadThree(){
     btnEnter.textContent=`Đang tải cảnh chùa… (${i+1}/${THREE_URLS.length})`;
     try{
       const m=await withTimeout(import(THREE_URLS[i]),(i===0&&THREE_URLS.length>3)?5000:10000);
-      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.6 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
+      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.6 · created by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
       last=new Error('thư viện 3D không hợp lệ');
     }catch(e){ last=e; }
   }
@@ -1101,7 +1101,7 @@ const SPOTS=[
   {id:'bell',label:'🔔 Thỉnh chuông',x:-15.2,z:4,r:2.6,fx:-20,fz:4},
   {id:'mok',label:'🪘 Gõ mõ tụng kinh',x:14.2,z:-17.4,r:2.3,fx:16.4,fz:-17.4},
   {id:'loc',label:'🧧 Hái Lộc',x:LOCZ.spot.x,z:LOCZ.spot.z,r:2.5,fx:LOCZ.x,fz:LOCZ.z},
-  {id:'xam',label:'🎋 Xin quẻ đầu năm',x:-14.2,z:-17.4,r:2.3,fx:-16.4,fz:-17.4},
+  {id:'xam',label:'🎋 Xin quẻ',x:-14.2,z:-17.4,r:2.3,fx:-16.4,fz:-17.4},
   {id:'wish',label:'✍️ Viết lời cầu an',x:13.7,z:12.5,r:2.6,fx:11.2,fz:12.5},
   {id:'eat',label:'🍜 Gọi món',x:REST.spot.x,z:REST.spot.z,r:2.8,fx:44.2,fz:-3},
 ];
@@ -1402,8 +1402,8 @@ aiBody.castShadow=true;
 const ROBES_A=[0xC5C9D0,0xA0522D,0xb64a3a,0xd9a441,0x5f8a5a,0x8e6aa6,0xe8e0cf,0xc9788c,0xD1D5DB,0x3f3f46,0xA0522D],ROBES_E=[0x7a7570,0xA0522D,0xC5C9D0,0xa89a86],ROBES_C=[0xff9f6e,0x7ec8e3,0xf2d15c,0xff8fa3,0x9ad17a],SKINS=[0xe8b894,0xd9a07a,0xc98e68,0xf0c8a8],HAIRS=[0x1f1a17,0x1f1a17,0x3a2a20,0x5a3a28];
 const agents=[];
 const FRONT_Z=-7.6;
-const PHRASES=['Cầu cho mẹ khoẻ','Mong thi đậu','Bình an cả nhà','Nam mô A Di Đà Phật','Cầu cho con ngoan','Mong năm mới nhiều niềm vui','Cầu cho ba mẹ bình an','Mong mọi người đều an lạc','Chùa yên tĩnh quá','Cầu cho gia đình sum họp','Thắp nén hương cầu bình an','A Di Đà Phật'];
-const WISH_AI=['Cầu cho cả nhà bình an','Mong con thi đỗ','Cầu cho ba mẹ mạnh khoẻ','Mong năm mới vui vẻ','Mong mọi việc suôn sẻ','Cầu bình an cho gia đình'];
+const PHRASES=['Cầu cho ba mẹ luôn khoẻ','Mong đợt này con thi đậu','Cầu mong an lành cho cả gia đình','Nam mô A Di Đà Phật','Nãy thấy chổ hái lộc, ra đó xem sao','Mong năm nay con thêm nhiều niềm vui','Cầu cho ba mẹ bình an','Mong mọi người đều an lạc','Chùa yên tĩnh quá mọi người nhỉ?','Đi ra ngoài kiếm gì ăn đi!','Thắp nén hương cầu bình an','A Di Đà Phật'];
+const WISH_AI=['Cầu cho cả nhà bình an','Mong con thi đỗ','Cầu cho ba mẹ mạnh khoẻ','Mong năm nay bớt drama','Mong năm nay nhiều bên gọi phỏng vấn','Cầu bình an cho gia đình'];
 const AI_PHOTO=[[POND.x-8.5,POND.z-2,POND.x,POND.z],[TREE.x-5,TREE.z+5,TREE.x,TREE.z],[-14.5,10,-20,4],[0,24,0,31],[-6,6,BURN.x,BURN.z],[6,-4,0,-14]];
 function randomFree(){ for(let i=0;i<14;i++){ const x=rnd(-22,22),z=rnd(-6,27); if(isFree(x,z,.6)&&!(Math.abs(x)<1.5&&z>29)) return [x,z]; } return [rnd(-3,3),24]; }
 for(let i=0;i<AI_N;i++){
