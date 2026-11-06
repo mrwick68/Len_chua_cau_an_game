@@ -171,8 +171,8 @@ body.ready .stuck{display:none}
   <input id="name" class="field" maxlength="18" autocomplete="off" placeholder="Nhập tên của bạn để vào chùa">
   <div class="lbl">Trang phục</div>
   <div class="robes">
-   <button type="button" class="robe on" data-robe="lam"><i style="background:#4f7fae"></i>Áo lam</button>
-   <button type="button" class="robe" data-robe="nau"><i style="background:#7a5231"></i>Áo nâu sòng</button>
+   <button type="button" class="robe on" data-robe="lam"><i style="background:#C5C9D0"></i>Áo lam</button>
+   <button type="button" class="robe" data-robe="nau"><i style="background:#A0522D"></i>Áo nâu sòng</button>
   </div>
   <div class="lbl">Nhân vật</div>
   <div class="seg two" id="gSeg">
@@ -195,10 +195,10 @@ body.ready .stuck{display:none}
   <div id="decayNote" class="decay hidden"></div>
   <div id="werr" class="err"></div>
   <button id="enter" class="btn" disabled>Đang tải cảnh chùa…</button>
-  <p class="small" style="margin-top:10px">Lần chạm này cũng sẽ bật âm thanh nền.</p>
+  <p class="small" style="margin-top:10px">Lần chạm này cũng sẽ bật âm thanh nền. Không nghe thấy gì trên iPhone? Gạt công tắc im lặng bên hông máy về chế độ có chuông và tăng âm lượng.</p>
   <p id="stuck" class="stuck">Nút vẫn chưa đổi thành “Vào chùa”? Có thể bạn đang mở file trong khung xem trước (Files, Zalo, Teams, Copilot…), nơi thường chặn JavaScript. Hãy mở link bằng <b>Safari</b> hoặc <b>Chrome</b>.</p>
   <noscript><p class="stuck" style="opacity:1;max-height:none;margin:10px 0 0;padding:8px 10px;animation:none">Trình duyệt đang tắt JavaScript nên game không chạy được. Hãy mở bằng Safari hoặc Chrome.</p></noscript>
-  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.4 · mod by mrwick68</p>
+  <p id="ver" class="small" style="margin-top:8px">Phiên bản 5.5 · mod by mrwick68</p>
  </div>
 </div>
 
@@ -288,7 +288,7 @@ async function loadThree(){
     btnEnter.textContent=`Đang tải cảnh chùa… (${i+1}/${THREE_URLS.length})`;
     try{
       const m=await withTimeout(import(THREE_URLS[i]),(i===0&&THREE_URLS.length>3)?5000:10000);
-      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.4 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
+      if(m&&m.WebGLRenderer){ try{ srcLabel.textContent='Phiên bản 5.5 · mod by mrwick68 · 3D: '+new URL(THREE_URLS[i],location.href).host; }catch(e){} return m; }
       last=new Error('thư viện 3D không hợp lệ');
     }catch(e){ last=e; }
   }
@@ -358,39 +358,64 @@ function isBad(text){
   return toks.some(t=>BAD.has(t));
 }
 
-/* ===== 3. ÂM THANH (Web Audio, tạo hoàn toàn bằng code) ===== */
+/* ===== 3. ÂM THANH (Web Audio, tạo hoàn toàn bằng code) =====
+   Lỗi "điện thoại bật loa ngoài không nghe gì, cắm tai nghe thì nghe": trên iPhone/iPad, Web Audio mặc định thuộc nhóm "ambient"
+   nên công tắc im lặng bên hông máy làm mất tiếng ở loa ngoài (tai nghe thì không bị chặn). Cách sửa:
+   (1) iOS/Safari 16.4+: đặt navigator.audioSession.type='playback' NGAY trong lần chạm đầu tiên, trước khi tạo AudioContext, và đặt lại ở mỗi lần chạm;
+   (2) máy cũ hơn (hoặc iOS 16.x cho chắc): phát một đoạn im lặng lặp lại bằng thẻ <audio> trong cùng lần chạm để mở "kênh media";
+   (3) chạm lại bất kỳ lúc nào cũng tự đánh thức AudioContext nếu hệ thống đã tạm dừng / ngắt (trạng thái "suspended" hoặc "interrupted");
+   (4) thêm bộ giới hạn âm lượng (compressor) và vài lớp nhạc nền ở dải trung (800 Hz – 3 kHz) để loa điện thoại nhỏ vẫn nghe được. */
 const Snd=(()=>{
   const AC=window.AudioContext||window.webkitAudioContext;
-  let ac=null,master=null,noise=null,muted=!!D.muted,tod=0,ambientOn=false,fxIn=null,ambBus=null,hall=false;
+  let ac=null,master=null,noise=null,noiseW=null,muted=!!D.muted,tod=0,ambientOn=false,fxIn=null,ambBus=null,hall=false,silentEl=null;
   const timers=[];
+  const UA=navigator.userAgent||'',IPH=/iP(hone|ad|od)/.test(UA),IOS=IPH||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1),IOSV=IPH?((UA.match(/OS (\d+)[_.]/)||[])[1]|0):99;
+  function session(){ try{ if(navigator.audioSession&&navigator.audioSession.type!=='playback') navigator.audioSession.type='playback'; }catch(e){} }
+  function silentWav(){                                        // WAV im lặng 0,25 giây tạo bằng code (không cần file ngoài)
+    const sr=8000,n=sr/4,b=new Uint8Array(44+n*2),dv=new DataView(b.buffer),W=(o,s)=>{ for(let i=0;i<s.length;i++) b[o+i]=s.charCodeAt(i); };
+    W(0,'RIFF'); dv.setUint32(4,36+n*2,true); W(8,'WAVEfmt '); dv.setUint32(16,16,true); dv.setUint16(20,1,true); dv.setUint16(22,1,true); dv.setUint32(24,sr,true); dv.setUint32(28,sr*2,true); dv.setUint16(32,2,true); dv.setUint16(34,16,true); W(36,'data'); dv.setUint32(40,n*2,true);
+    return URL.createObjectURL(new Blob([b],{type:'audio/wav'}));
+  }
+  function silentUnlock(){                                     // dự phòng cho iPhone cũ: <audio> im lặng lặp lại để mở kênh media
+    if(!IOS||silentEl||muted) return; if(navigator.audioSession&&IOSV>=17) return;
+    try{ const a=new Audio(silentWav()); a.loop=true; a.preload='auto'; a.setAttribute('x-webkit-airplay','deny'); a.setAttribute('playsinline',''); silentEl=a; const p=a.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){ silentEl=null; }
+  }
   function init(){
-    if(ac||!AC) return;
-    ac=new AC(); master=ac.createGain(); master.gain.value=.9; master.connect(ac.destination); ambBus=ac.createGain(); ambBus.gain.value=hall?0:1; ambBus.connect(master); buildFx();
+    session();
+    if(ac||!AC){ if(ac&&!muted) resume(); return; }
+    silentUnlock();
+    ac=new AC(); master=ac.createGain(); master.gain.value=.9;
+    try{ const cp=ac.createDynamicsCompressor(); cp.threshold.value=-14; cp.knee.value=18; cp.ratio.value=5; cp.attack.value=.004; cp.release.value=.25; master.connect(cp); cp.connect(ac.destination); }catch(e){ master.connect(ac.destination); }
+    ambBus=ac.createGain(); ambBus.gain.value=hall?0:1; ambBus.connect(master); buildFx();
     noise=ac.createBuffer(1,ac.sampleRate*3,ac.sampleRate);
     const d=noise.getChannelData(0); let last=0;
     for(let i=0;i<d.length;i++){ const w=Math.random()*2-1; last=(last+.02*w)/1.02; d[i]=last*3.2; }
+    noiseW=ac.createBuffer(1,ac.sampleRate*2,ac.sampleRate); const dw=noiseW.getChannelData(0); for(let i=0;i<dw.length;i++) dw[i]=Math.random()*2-1;
     if(muted) ac.suspend();
     ambient();
   }
-  const src=()=>{const s=ac.createBufferSource();s.buffer=noise;s.loop=true;s.start(ac.currentTime+Math.random()*2);return s};
+  const src=(buf)=>{const s=ac.createBufferSource();s.buffer=buf||noise;s.loop=true;s.start(ac.currentTime+Math.random()*2);return s};
   function lfo(freq,amt,target){const o=ac.createOscillator();o.frequency.value=freq;const g=ac.createGain();g.gain.value=amt;o.connect(g).connect(target);o.start();}
   function ambient(){
     if(ambientOn) return; ambientOn=true;
-    /* gió */
+    /* gió (trầm) */
     const w=src(),wf=ac.createBiquadFilter(); wf.type='lowpass'; wf.frequency.value=420;
     const wg=ac.createGain(); wg.gain.value=.22; w.connect(wf).connect(wg).connect(ambBus);
     lfo(.07,160,wf.frequency); lfo(.05,.08,wg.gain);
+    /* gió thoảng ở dải trung: loa điện thoại phát được (loa nhỏ gần như không phát được dưới ~400 Hz) */
+    const w2=src(noiseW),bp2=ac.createBiquadFilter(); bp2.type='bandpass'; bp2.frequency.value=1100; bp2.Q.value=.6;
+    const g2=ac.createGain(); g2.gain.value=.05; w2.connect(bp2).connect(g2).connect(ambBus); lfo(.06,.03,g2.gain); lfo(.045,420,bp2.frequency);
     /* lá xào xạc */
     const l=src(),hp=ac.createBiquadFilter(); hp.type='highpass'; hp.frequency.value=2600;
-    const lg=ac.createGain(); lg.gain.value=.018; l.connect(hp).connect(lg).connect(ambBus); lfo(.21,.014,lg.gain);
-    /* tiếng tụng kinh rì rầm ở xa */
-    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=640; bp.Q.value=1.3;
-    [110,164.8,220.5].forEach((f,i)=>{const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f*(1+(i-1)*.004);const g=ac.createGain();g.gain.value=.5;o.connect(g).connect(bp);o.start();});
-    const cg=ac.createGain(); cg.gain.value=.014; bp.connect(cg).connect(ambBus); lfo(.55,.011,cg.gain); lfo(.09,90,bp.frequency);
+    const lg=ac.createGain(); lg.gain.value=.03; l.connect(hp).connect(lg).connect(ambBus); lfo(.21,.02,lg.gain);
+    /* tiếng tụng kinh rì rầm ở xa (thêm hoạ âm trung để nghe được trên loa nhỏ) */
+    const bp=ac.createBiquadFilter(); bp.type='bandpass'; bp.frequency.value=760; bp.Q.value=1.1;
+    [110,164.8,220.5,330.7,441].forEach((f,i)=>{const o=ac.createOscillator();o.type='sawtooth';o.frequency.value=f*(1+(i-1)*.004);const g=ac.createGain();g.gain.value=i<3?.5:.35;o.connect(g).connect(bp);o.start();});
+    const cg=ac.createGain(); cg.gain.value=.034; bp.connect(cg).connect(ambBus); lfo(.55,.02,cg.gain); lfo(.09,110,bp.frequency);
     /* nhịp mõ xa + chim + dế + chuông xa */
-    timers.push(setInterval(()=>{ if(ac.state==='running') tock(.045,ambBus); },950));
-    const birds=()=>{ if(ac&&ac.state==='running'&&tod<.75){ const n=ri(2,4),f=rnd(2300,3600),v=.03*(1-tod); for(let i=0;i<n;i++) tone(f*rnd(.9,1.15),.09,v,'sine',i*.13,f*1.25,ambBus); } timers.push(setTimeout(birds,rnd(2500,7000))); };
-    const crickets=()=>{ if(ac&&ac.state==='running'&&tod>.35){ for(let i=0;i<3;i++) tone(4300,.05,.012*tod,'square',i*.09,0,ambBus); } timers.push(setTimeout(crickets,rnd(900,1800))); };
+    timers.push(setInterval(()=>{ if(ac.state==='running') tock(.07,ambBus); },950));
+    const birds=()=>{ if(ac&&ac.state==='running'&&tod<.75){ const n=ri(2,4),f=rnd(2300,3600),v=.055*(1-tod); for(let i=0;i<n;i++) tone(f*rnd(.9,1.15),.09,v,'sine',i*.13,f*1.25,ambBus); } timers.push(setTimeout(birds,rnd(2500,7000))); };
+    const crickets=()=>{ if(ac&&ac.state==='running'&&tod>.35){ for(let i=0;i<3;i++) tone(4300,.05,.03*tod,'square',i*.09,0,ambBus); } timers.push(setTimeout(crickets,rnd(900,1800))); };
     const farBell=()=>{ if(ac&&ac.state==='running') bell(.16); timers.push(setTimeout(farBell,rnd(45000,80000))); };
     timers.push(setTimeout(birds,2500),setTimeout(crickets,3000),setTimeout(farBell,15000));
   }
@@ -436,13 +461,26 @@ const Snd=(()=>{
   }
   function chime(){ tone(660,.9,.12,'sine',0,0,ambBus); tone(880,1.1,.1,'sine',.18,0,ambBus); tone(1320,1.2,.06,'sine',.36,0,ambBus); }
   function strike(){ tone(300,.12,.15,'triangle',0,180); }
-  return {init,tone,tock,bell,chime,strike,
+  function resume(){                                          // đánh thức âm thanh sau khi bị tạm dừng / ngắt (cuộc gọi, Siri, khoá màn hình, đổi tab…)
+    if(!ac||muted) return; session();
+    if(silentEl&&silentEl.paused){ try{ const p=silentEl.play(); if(p&&p.catch) p.catch(()=>{}); }catch(e){} }
+    try{ const p=ac.resume(); if(p&&p.catch) p.catch(()=>{}); }catch(e){}
+  }
+  function hello(){                                           // tiếng chuông nhỏ khi vào chùa: nghe được là âm thanh đã bật
+    if(!ac||muted) return; const go=()=>{ if(ac.state==='running'){ tone(660,.5,.12,'sine'); tone(990,.6,.08,'sine',.14); } };
+    try{ const p=ac.resume(); if(p&&p.then) p.then(go).catch(()=>{}); else go(); }catch(e){}
+  }
+  ['touchend','click','keydown'].forEach(ev=>addEventListener(ev,()=>{ if(IOS) session(); if(ac&&!muted&&ac.state!=='running') resume(); },{passive:true,capture:true}));
+  return {init,tone,tock,bell,chime,strike,resume,hello,
     setTod(v){tod=v},
     setHall(v){ hall=!!v; if(ambBus&&ac) ambBus.gain.setTargetAtTime(hall?0:1,ac.currentTime,.2); },
     get hall(){return hall},
     get muted(){return muted},
-    setMuted(m){muted=m;D.muted=m;Store.save();if(ac){m?ac.suspend():ac.resume();}},
-    resume(){ if(ac&&!muted) ac.resume(); }, pause(){ if(ac) ac.suspend(); }};
+    get running(){return !!ac&&ac.state==='running'},
+    get state(){return ac?ac.state:'none'},
+    get silentEl(){return silentEl},
+    setMuted(m){muted=m;D.muted=m;Store.save();if(ac){ if(m){ ac.suspend(); if(silentEl) silentEl.pause(); } else resume(); }},
+    pause(){ if(ac) ac.suspend(); if(silentEl) silentEl.pause(); }};
 })();
 
 /* ===== 4. CẢNH, ÁNH SÁNG, BẦU TRỜI HOÀNG HÔN → ĐÊM ===== */
@@ -711,7 +749,7 @@ function buildTemple(){
   /* --- Tường rào + va chạm --- */
   B.box(0,1.1,-33.3,53,2.2,.9,PALE); colB(-26.5,26.5,-33.8,-32.6);
   B.box(-26.4,1.1,-1,.9,2.2,65,PALE);
-  B.box(26.4,1.1,-19.7,.9,2.2,27.6,PALE); B.box(26.4,1.1,15.7,.9,2.2,31.6,PALE);     // tường đông chừa cổng sang nhà hàng chay (z từ -5,2 đến -0,8)
+  B.box(26.4,1.1,-19.7,.9,2.2,27.6,PALE); B.box(26.4,1.1,15.7,.9,2.2,31.6,PALE);     // tường đông chừa cổng sang Nhà Hàng Chay Tịnh Tâm (z từ -5,2 đến -0,8)
   colB(25.95,26.85,-33.5,-5.9); colB(25.95,26.85,-.1,31.5);
   B.box(-19.5,1.1,31,14,2.2,.9,PALE); B.box(19.5,1.1,31,14,2.2,.9,PALE); colB(-26.5,-12.4,30.4,31.6); colB(12.4,26.5,30.4,31.6);
   /* --- Cổng tam quan --- */
@@ -786,25 +824,33 @@ function buildTemple(){
 const BURN={x:0,z:2},TREE={x:19,z:4},POND={x:16,z:21},LANT=[],SEATS=[];
 buildTemple();
 
-/* ===== 5c. NHÀ HÀNG CHAY (khu bên phải chùa: đi qua cổng ở tường phía đông, z ≈ -3) =====
+/* ===== 5c. NHÀ HÀNG CHAY TỊNH TÂM (khu bên phải chùa: đi qua cổng ở tường phía đông, z ≈ -3) =====
    Sân lát gạch 28 × 23 m có hàng rào, gian chính mái cong: quầy gọi món + bảng thực đơn + bếp (cô bếp chay),
    6 bàn ăn / 24 ghế đẩu (khách AI cũng sang ăn), đèn lồng. Khối tĩnh gộp vào mesh chung, có va chạm. */
 const ESEATS=[];                                               // ghế ngồi ăn của khách AI
 const REST={gate:{x:26.4,z:-3},spot:{x:41.2,z:-3},x0:26.9,x1:55.5,z0:-14.5,z1:8.5,chef:{x:46.8,z:-3}};
 const MENU=[['🍜','Bún bò chay'],['🍚','Cơm chay'],['🥬','Canh rau dền chay'],['🥣','Nước tương'],['🍢','Đậu hủ chiên'],['🍘','Sườn chiên chay'],['🥛','Sữa đậu nành'],['🌯','Gỏi cuốn chay'],['🍮','Chè đậu xanh'],['🍵','Trà sen'],['🍄','Nấm xào']];
-function signMesh(text,w,h,x,y,z,ry,fs){                       // biển chữ quốc ngữ (không chữ Hán)
-  const t=canvasTex(512,Math.round(512*h/w),(c,W,H)=>{c.fillStyle='#2f6a3a';c.fillRect(0,0,W,H);c.strokeStyle='#f1d78a';c.lineWidth=10;c.strokeRect(9,9,W-18,H-18);c.fillStyle='#fff3c8';c.font=`bold ${fs}px "Segoe UI",Roboto,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillText(text,W/2,H/2+3);});
+function signTwo(l1,l2,w,h,x,y,z,ry){                           // biển 2 dòng: "NHÀ HÀNG CHAY" ở trên, "TỊNH TÂM" (to hơn, màu vàng) nằm dưới
+  const W=512,H=Math.round(512*h/w);
+  const t=canvasTex(W,H,(c)=>{
+    c.fillStyle='#2f6a3a'; c.fillRect(0,0,W,H); c.strokeStyle='#f1d78a'; c.lineWidth=10; c.strokeRect(9,9,W-18,H-18);
+    c.strokeStyle='#f1d78a66'; c.lineWidth=2; c.strokeRect(22,22,W-44,H-44);
+    c.textAlign='center'; c.textBaseline='middle';
+    const fit=(txt,fs0,wt)=>{ let fs=fs0; c.font=`${wt} ${fs}px "Segoe UI",Roboto,sans-serif`; while(c.measureText(txt).width>W-70&&fs>14){ fs-=2; c.font=`${wt} ${fs}px "Segoe UI",Roboto,sans-serif`; } return fs; };
+    fit(l1,H*.27,'bold'); c.fillStyle='#fff3c8'; c.fillText(l1,W/2,H*.31);
+    fit(l2,H*.40,'bold'); c.fillStyle='#ffd978'; c.fillText(l2,W/2,H*.69);
+  });
   const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:t})); m.position.set(x,y,z); m.rotation.y=ry; scene.add(m); return m;
 }
 function menuBoard(PZ){                                         // bảng thực đơn trên tường sau quầy, quay mặt về phía tây
   const W=512,H=600,t=canvasTex(W,H,(c)=>{
     c.fillStyle='#3b2418'; c.fillRect(0,0,W,H); c.strokeStyle='#e8b857'; c.lineWidth=10; c.strokeRect(9,9,W-18,H-18);
-    c.textAlign='center'; c.textBaseline='middle'; c.fillStyle='#ffe3a0'; c.font='bold 46px "Segoe UI",Roboto,sans-serif'; c.fillText('THỰC ĐƠN CHAY',W/2,56);
-    c.fillStyle='#f1d9a0'; c.font='500 24px "Segoe UI",Roboto,sans-serif'; c.fillText('mỗi món hồi ngẫu nhiên 10 – 50 mana',W/2,98);
+    c.textAlign='center'; c.textBaseline='middle'; c.fillStyle='#ffe3a0'; c.font='bold 40px "Segoe UI",Roboto,sans-serif'; c.fillText('THỰC ĐƠN · TỊNH TÂM',W/2,56);
+    c.fillStyle='#f1d9a0'; c.font='500 21px "Segoe UI",Roboto,sans-serif'; c.fillText('bê ra bàn ngồi ăn 5 giây · hồi 10 – 50 mana',W/2,98);
     c.textAlign='left'; c.fillStyle='#fff0cc'; c.font='600 30px "Segoe UI",Roboto,sans-serif'; MENU.forEach((m,i)=>c.fillText('•  '+m[1],54,150+i*36));
     c.textAlign='center'; c.fillStyle='#d9c08a'; c.font='500 21px "Segoe UI",Roboto,sans-serif'; c.fillText('Gọi liên tiếp 2 món; chưa đầy mana thì nghỉ 10 giây',W/2,H-30);
   });
-  const m=new THREE.Mesh(new THREE.PlaneGeometry(3.4,3.4*H/W),new THREE.MeshBasicMaterial({map:t})); m.position.set(53.55,3.2,PZ); m.rotation.y=-Math.PI/2; scene.add(m); return m;
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(3.0,3.0*H/W),new THREE.MeshBasicMaterial({map:t})); m.position.set(53.55,2.2,PZ); m.rotation.y=-Math.PI/2; scene.add(m); return m;
 }
 function buildRestaurant(){
   const {x0,x1,z0,z1}=REST,cz=(z0+z1)/2,PZ=-3;
@@ -822,15 +868,15 @@ function buildRestaurant(){
   B.box(26.4,1.8,-5.9,1.4,3.6,1.4,WOOD); B.box(26.4,1.8,-.1,1.4,3.6,1.4,WOOD); B.box(26.4,3.0,PZ,.9,.5,6.6,WOOD);
   colB(25.7,27.1,-6.6,-5.2); colB(25.7,27.1,-.8,.6);
   roof(26.4,3.4,PZ,2.6,7.8,.9,.25,.5);
-  signMesh('NHÀ HÀNG CHAY',3.8,.85,25.93,3.0,PZ,-Math.PI/2,56); signMesh('NHÀ HÀNG CHAY',3.8,.85,26.87,3.0,PZ,Math.PI/2,56);
+  signTwo('NHÀ HÀNG CHAY','TỊNH TÂM',3.8,1.15,25.93,2.95,PZ,-Math.PI/2); signTwo('NHÀ HÀNG CHAY','TỊNH TÂM',3.8,1.15,26.87,2.95,PZ,Math.PI/2);
   LANT.push([25.0,2.2,-5.9],[25.0,2.2,-.1],[27.8,2.2,-5.9],[27.8,2.2,-.1]);
   /* gian chính: 6 cột, xà, mái cong ngói đỏ, tường sau */
   for(const x of [41.6,47.5,53.2]) for(const z of [-11.2,5.2]){ B.cyl(x,2.6,z,.3,.34,5.2,WOOD,8); B.box(x,.15,z,.95,.3,.95,0x9c8a7a); colC(x,z,.5); }
   B.box(47.4,5.35,-11.2,12.4,.34,.42,WOOD); B.box(47.4,5.35,5.2,12.4,.34,.42,WOOD); B.box(41.6,5.0,PZ,.34,.34,16.8,WOOD);
   roof(47.5,4.5,PZ,14,19,2.2,.4,1.3);
   B.box(53.9,2.6,PZ,.5,5.2,17.2,0xd9b27a); colB(53.65,54.15,-11.6,5.6);
-  signMesh('NHÀ HÀNG CHAY',6,1.3,41.35,4.6,PZ,-Math.PI/2,64);
-  for(const z of [-9,-3,3]) LANT.push([41.0,4.2,z]);
+  signTwo('NHÀ HÀNG CHAY','TỊNH TÂM',5,1.5,41.35,4.9,PZ,-Math.PI/2);
+  for(const z of [-10.2,-7.4,1.4,4.2]) LANT.push([41.0,4.2,z]);       // đèn lồng hai bên biển, không che chữ
   /* quầy gọi món + bát, ấm; bếp phía sau; cô bếp được thêm ở mục nhân vật */
   B.box(44.2,.55,PZ,1.5,1.1,8,0x7a3426); G.box(44.2,1.16,PZ,1.9,.12,8.4,GOLD); colB(43.4,45.0,PZ-4.2,PZ+4.2);
   for(const z of [-6.2,-4.8,-1.4,.2]) G.cyl(44.1,1.32,z,.3,.22,.16,0xf2e6c9,10);
@@ -1007,7 +1053,7 @@ function addWishTag(text,kind,o={}){
   kind=kind==='lantern'?'lantern':'ribbon';
   const ref=kind==='ribbon'?ribAddWish():lampAddWish(),now=performance.now()/1000;
   const tex=new THREE.CanvasTexture(wishCanvas(text,kind)); tex.colorSpace=THREE.SRGBColorSpace;
-  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false})); sp.renderOrder=6;      // luôn hiện trên cùng (không bị tán cây che) sp.scale.set(.01,.01,1);
+  const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true,depthWrite:false,depthTest:false,fog:false})); sp.renderOrder=6; sp.scale.set(.01,.01,1);      // luôn hiện trên cùng (không bị tán cây che)
   const w=kind==='ribbon'?3.0:2.5,h=w*(kind==='ribbon'?256/384:232/384);
   const g={sp,tex,ref,kind,w,h,text,born:now-(o.age||0),pop0:o.restore?now-2:now,remote:!!o.remote,die:0,init:false,px:0,py:0,pz:0,po:0,sc:1,mode:'attach',rank:0};
   scene.add(sp); wishTags.push(g); wtDirty=true;
@@ -1067,7 +1113,7 @@ function onWishSync(list){
 }
 
 /* ===== 7. NHÂN VẬT CHIBI (người chơi + người chơi khác) ===== */
-const ROBE={lam:0x4f7fae,nau:0x7a5231};
+const ROBE={lam:0xC5C9D0,nau:0xA0522D};          // áo lam = xám trắng (#C5C9D0), áo nâu sòng = nâu sòng (#A0522D)
 const SKIN=0xe8b894,HAIR=0x241c18;
 const robeMats={lam:new THREE.MeshStandardMaterial({color:ROBE.lam,roughness:.9,flatShading:true}),nau:new THREE.MeshStandardMaterial({color:ROBE.nau,roughness:.9,flatShading:true})};
 const skinMat=new THREE.MeshStandardMaterial({color:SKIN,roughness:.8,flatShading:true}),hairMat=new THREE.MeshStandardMaterial({color:HAIR,roughness:.9,flatShading:true});
@@ -1092,13 +1138,18 @@ const gHairA=new THREE.CylinderGeometry(.5,.63,.86,14,1,true,Math.PI/2,Math.PI);
 const gHairB1=new THREE.CylinderGeometry(.36,.3,.5,10,1,true,Math.PI/2,Math.PI);              // rủ xuống vai
 const gHairB2=new THREE.CylinderGeometry(.36,.27,1.05,10,1,true,Math.PI/2,Math.PI);           // rủ xuống lưng
 const gBun=new THREE.SphereGeometry(.25,8,6);
+const trayMat=new THREE.MeshStandardMaterial({color:0x8a5a34,roughness:.9,flatShading:true}),bowlMat=new THREE.MeshStandardMaterial({color:0xf2e6c9,roughness:.7,flatShading:true}),foodMat=new THREE.MeshStandardMaterial({color:0xd9792a,roughness:.8,flatShading:true});
+const gTray=new THREE.BoxGeometry(.95,.05,.6),gBowl=new THREE.CylinderGeometry(.27,.17,.17,10),gFood=new THREE.CylinderGeometry(.24,.24,.04,10);
 function makeChibi(robeKey,name,hairCode=0){
   const root=new THREE.Group(),body=new THREE.Group(),upper=new THREE.Group(); root.add(body); body.add(upper);   // upper: đầu + tóc + hai tay (hạ thấp khi ngồi)
   const robe=new THREE.Mesh(gRobe,robeMats[robeKey]); const head=new THREE.Mesh(gHead,skinMat); head.position.y=1.72; head.scale.set(1,.95,1);
   const arms=[]; for(const sx of[1,-1]){ const pv=new THREE.Group(); pv.position.set(sx*.46,1.2,0); pv.rotation.order='YXZ'; const a=new THREE.Mesh(gArm,robeMats[robeKey]); const h=new THREE.Mesh(gHand,skinMat); h.position.y=-.66; pv.add(a,h); upper.add(pv); arms.push({pv,a}); }
   [robe,head].forEach(m=>{m.castShadow=true;}); body.add(robe); upper.add(head);
   const tag=nameTag(name||''); root.add(tag.sp);
-  const ch={root,body,upper,robe,tag,robeKey,arms,sk:0,bw:0,hurt:0,hair:-1,hairMeshes:[],pose:'idle',t:Math.random()*10,
+  const tray=new THREE.Group(); tray.position.set(0,.95,.64); tray.visible=false; upper.add(tray);          // khay thức ăn: chỉ hiện khi bê khay / ngồi ăn
+  const tb=new THREE.Mesh(gTray,trayMat),b1=new THREE.Mesh(gBowl,bowlMat),fd=new THREE.Mesh(gFood,foodMat),b2=new THREE.Mesh(gBowl,bowlMat);
+  b1.position.set(-.12,.11,0); fd.position.set(-.12,.2,0); b2.scale.set(.6,.6,.6); b2.position.set(.3,.08,.05); tray.add(tb,b1,fd,b2);
+  const ch={root,body,upper,robe,tag,tray,robeKey,arms,sk:0,bw:0,hurt:0,hair:-1,hairMeshes:[],pose:'idle',t:Math.random()*10,
     setRobe(k){this.robeKey=k;robe.material=robeMats[k];arms.forEach(o=>o.a.material=robeMats[k]);},
     setHair(code){
       code=clamp(code|0,0,4); if(code===this.hair) return; this.hair=code;
@@ -1113,15 +1164,16 @@ function makeChibi(robeKey,name,hairCode=0){
 }
 /* Dáng đứng: idle / walk / pray (chắp tay) / wave / bell / mok / write / xam / sit (ngồi thiền) */
 function animChar(ch,pose,moving,dt){
-  ch.t+=dt; const t=ch.t,[aL,aR]=ch.arms; let bx=0,by=0,lP=0,rP=0,lY=0,rY=0,rZ=0,lZ=0; const sit=pose==='sit';
-  if(sit){ lP=rP=-1.25; lY=-.7; rY=.7; bx=.04+Math.sin(t*.9)*.015; by=Math.sin(t*.9)*.012; }
+  ch.t+=dt; const t=ch.t,[aL,aR]=ch.arms; let bx=0,by=0,lP=0,rP=0,lY=0,rY=0,rZ=0,lZ=0; const sit=pose==='sit'||pose==='eat';      // ngồi thiền hoặc ngồi ăn: hạ thấp người
+  if(pose==='sit'){ lP=rP=-1.25; lY=-.7; rY=.7; bx=.04+Math.sin(t*.9)*.015; by=Math.sin(t*.9)*.012; }
   else if(pose==='pray'||pose==='incense'||pose==='xam'){ lP=rP=-1.3; lY=-.6; rY=.6; bx=.12+Math.sin(t*1.5)*.02; }
   else if(pose==='wave'){ rP=-2.7; rZ=Math.sin(t*12)*.4; lP=.1; }
   else if(pose==='bell'){ lP=rP=-1.0+Math.sin(t*6)*.25; lY=-.25; rY=.25; bx=.08; }
   else if(pose==='mok'){ lP=-.6; rP=-1.0+Math.abs(Math.sin(t*5))*.45; bx=.1; }
   else if(pose==='write'){ rP=-.9+Math.sin(t*7)*.12; lP=-.4; bx=.18; }
   else if(pose==='bow'){ lP=rP=-1.2; lY=-.6; rY=.6; }
-  else if(pose==='eat'){ lP=-.4; rP=-1.8+Math.sin(t*8)*.35; bx=.1+Math.sin(t*8)*.04; }
+  else if(pose==='eat'){ lP=-1.0; rP=-1.75+Math.sin(t*8)*.35; bx=.12+Math.sin(t*8)*.04; }
+    else if(pose==='carry'){ lP=rP=-1.15; lY=-.1; rY=.1; bx=.04; by=moving?Math.abs(Math.sin(t*10))*.05:0; }
   else if(pose==='knock'){ rP=-2.4+Math.abs(Math.sin(t*9))*1.5; lP=-.3; bx=.14; }
   else if(pose==='thump'){ rP=-2.6+Math.abs(Math.sin(t*13))*1.0; lP=.2; bx=.24; }
   else if(pose==='bite'){ lP=rP=-.6; bx=.34+Math.sin(t*16)*.1; }
@@ -1132,12 +1184,12 @@ function animChar(ch,pose,moving,dt){
   ch.body.rotation.x+=(bx-ch.body.rotation.x)*k; ch.body.position.y=by+.2*ch.sk;
   if(ch.hurt>0){ ch.hurt-=dt; ch.body.rotation.z=Math.sin(t*34)*.3*Math.min(1,ch.hurt/.5); } else ch.body.rotation.z+=(0-ch.body.rotation.z)*k;     // bị đánh: lắc lư choáng váng
   const th=.95*ch.bw; ch.upper.rotation.x=th; ch.upper.position.y=-.5*ch.sk+(1-Math.cos(th)); ch.upper.position.z=-Math.sin(th);   // cúi chào: gập người tại eo
-  ch.robe.scale.set(1+.15*ch.sk,1-.4*ch.sk,1+.15*ch.sk); ch.tag.sp.position.y=TAG_Y-.5*ch.sk;      // ngồi: thân thấp lại, đầu hạ xuống
+  ch.robe.scale.set(1+.15*ch.sk,1-.4*ch.sk,1+.15*ch.sk); ch.tag.sp.position.y=TAG_Y-.5*ch.sk; ch.tray.visible=(pose==='carry'||pose==='eat'); ch.tray.position.set(0,.95+.22*ch.sk,.64+.22*ch.sk);      // ngồi: thân thấp lại, đầu hạ xuống
 }
 
 const me=makeChibi('lam','',0); me.root.position.set(0,0,19); me.root.rotation.y=Math.PI; scene.add(me.root);
 me.root.traverse(o=>{if(o.isMesh)o.castShadow=true;});
-const MY={x:0,z:19,yaw:Math.PI,pose:'idle',poseUntil:0,lock:0,lockT0:0,sit:-1,sitT0:0,sitAcc:0,sitPts:0,sit69:false,glide:null};
+const MY={x:0,z:19,yaw:Math.PI,pose:'idle',poseUntil:0,lock:0,lockT0:0,sit:-1,sitT0:0,sitAcc:0,sitPts:0,sit69:false,glide:null,eat:null};
 const remotes=[];       // người chơi khác (được dựng ở mục 9)
 const chef=makeChibi('nau','Cô Bếp Chay',3); chef.root.position.set(REST.chef.x,0,REST.chef.z); chef.root.rotation.y=-Math.PI/2; scene.add(chef.root);   // cô bếp chay đứng sau quầy
 function chefUpdate(dt){ animChar(chef,'mok',false,dt); }
@@ -1151,7 +1203,7 @@ const aiHair=new THREE.InstancedMesh(new THREE.SphereGeometry(.42,8,5,0,Math.PI*
 const aiPhone=new THREE.InstancedMesh(new THREE.BoxGeometry(.2,.32,.04),new THREE.MeshBasicMaterial({color:0x222233}),AI_N);
 const aiMeshes=[aiBody,aiHead,aiHair,aiPhone]; aiMeshes.forEach(m=>{m.frustumCulled=false;m.castShadow=false;scene.add(m);});
 aiBody.castShadow=true;
-const ROBES_A=[0x6f8fb0,0x8b5e3c,0xb64a3a,0xd9a441,0x5f8a5a,0x8e6aa6,0xe8e0cf,0xc9788c,0x4a6f8a,0x3f3f46,0x7a5231],ROBES_E=[0x7a7570,0x8b5e3c,0x6f8fb0,0xa89a86],ROBES_C=[0xff9f6e,0x7ec8e3,0xf2d15c,0xff8fa3,0x9ad17a],SKINS=[0xe8b894,0xd9a07a,0xc98e68,0xf0c8a8],HAIRS=[0x1f1a17,0x1f1a17,0x3a2a20,0x5a3a28];
+const ROBES_A=[0xC5C9D0,0xA0522D,0xb64a3a,0xd9a441,0x5f8a5a,0x8e6aa6,0xe8e0cf,0xc9788c,0xD1D5DB,0x3f3f46,0xA0522D],ROBES_E=[0x7a7570,0xA0522D,0xC5C9D0,0xa89a86],ROBES_C=[0xff9f6e,0x7ec8e3,0xf2d15c,0xff8fa3,0x9ad17a],SKINS=[0xe8b894,0xd9a07a,0xc98e68,0xf0c8a8],HAIRS=[0x1f1a17,0x1f1a17,0x3a2a20,0x5a3a28];
 const agents=[];
 const FRONT_Z=-7.6;
 const PHRASES=['Cầu cho mẹ khoẻ','Mong thi đậu','Bình an cả nhà','Nam mô A Di Đà Phật','Cầu cho con ngoan','Mong năm mới nhiều niềm vui','Cầu cho ba mẹ bình an','Mong mọi người đều an lạc','Chùa yên tĩnh quá','Cầu cho gia đình sum họp','Thắp nén hương cầu bình an','A Di Đà Phật'];
@@ -1264,7 +1316,7 @@ const Net=(()=>{
   const qs=new URLSearchParams(location.search);
   const ID_RE=/^[a-z0-9]{4,16}$/;
   const id=Array.from(crypto.getRandomValues(new Uint8Array(5)),b=>b.toString(16).padStart(2,'0')).join('');
-  const peers=new Map(); const POSES=['idle','walk','pray','wave','bell','mok','write','xam','incense','sit','bow','eat','knock','thump','bite'];
+  const peers=new Map(); const POSES=['idle','walk','pray','wave','bell','mok','write','xam','incense','sit','bow','eat','knock','thump','bite','carry'];
   const enc=new TextEncoder(),dec=new TextDecoder();
   const u16=n=>[n>>8,n&255], str=s=>{const b=enc.encode(s);return [...u16(b.length),...b]};
   const rl=n=>{const o=[];do{let d=n%128;n=Math.floor(n/128);if(n>0)d|=128;o.push(d);}while(n>0);return o};
@@ -1481,7 +1533,7 @@ function remoteUpdate(dt){
   }
   usedR.clear();
   for(const c of remotes){ if(c.pid&&(!Net.peers.has(c.pid)||!vis.has(c.pid))){ c.pid=null; c.root.visible=false; } else if(c.pid) usedR.add(c.pid); }
-  for(const [pid,p] of Net.peers){ if(usedR.has(pid)||!vis.has(pid)) continue; const c=remotes.find(r=>!r.pid); if(!c) break; c.pid=pid; c.root.visible=true; c.setRobe(p.r); c.setHair(p.h|0); c.tag.set(p.n,lvTag(p.l|0)); c.root.position.set(p.x,groundY(p.x,p.z),p.z); c.root.rotation.y=p.yaw; c.sk=p.a==='sit'?1:0; usedR.add(pid); }
+  for(const [pid,p] of Net.peers){ if(usedR.has(pid)||!vis.has(pid)) continue; const c=remotes.find(r=>!r.pid); if(!c) break; c.pid=pid; c.root.visible=true; c.setRobe(p.r); c.setHair(p.h|0); c.tag.set(p.n,lvTag(p.l|0)); c.root.position.set(p.x,groundY(p.x,p.z),p.z); c.root.rotation.y=p.yaw; c.sk=(p.a==='sit'||p.a==='eat')?1:0; usedR.add(pid); }
   for(const c of remotes){ if(!c.pid) continue; const p=Net.peers.get(c.pid); if(!p) continue; c.tag.set(p.n,lvTag(p.l|0)); if(c.robeKey!==p.r) c.setRobe(p.r); if(c.hair!==(p.h|0)) c.setHair(p.h|0);
     const ox=c.root.position.x,oz=c.root.position.z,far=Math.hypot(p.x-ox,p.z-oz)>6,k=far?1:1-Math.exp(-dt*9); const nx=lerp(ox,p.x,k),nz=lerp(oz,p.z,k); const mv=Math.hypot(nx-ox,nz-oz)/Math.max(dt,.001);
     c.root.position.set(nx,lerp(c.root.position.y,groundY(nx,nz),k),nz); c.root.rotation.y+=angDiff(c.root.rotation.y,p.yaw)*k;
@@ -1514,9 +1566,12 @@ function updatePlayer(dt,now){
   let mx=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x, mz=(keys.KeyS||keys.ArrowDown?1:0)-(keys.KeyW||keys.ArrowUp?1:0)+joy.y;
   if(now<MY.lock&&Math.hypot(mx,mz)>.3&&now-MY.lockT0>1.5){ MY.lock=0; MY.poseUntil=0; }
   if(MY.lock>now+4) MY.lock=now+4;
-  courtesyUpdate(now);
+  if(MY.eat){ mx=0; mz=0; }
+    courtesyUpdate(now);
+    let autoMove=false;
     const locked=modalOpen||now<MY.lock; if(locked){mx=0;mz=0;}
-  if(MY.glide){ const g=MY.glide; MY.x+=(g.x-MY.x)*Math.min(1,dt*9); MY.z+=(g.z-MY.z)*Math.min(1,dt*9); if(Math.hypot(g.x-MY.x,g.z-MY.z)<.02){ MY.x=g.x; MY.z=g.z; MY.glide=null; } }
+  if(MY.eat) autoMove=eatStep(dt);
+    if(MY.glide){ const g=MY.glide; MY.x+=(g.x-MY.x)*Math.min(1,dt*9); MY.z+=(g.z-MY.z)*Math.min(1,dt*9); if(Math.hypot(g.x-MY.x,g.z-MY.z)<.02){ MY.x=g.x; MY.z=g.z; MY.glide=null; } }
   if(MY.sit>=0){ if(!locked&&Math.hypot(mx,mz)>.35&&now-MY.sitT0>.35) standUp(); else { mx=0; mz=0; } }   // di chuyển = đứng dậy và đi ngay
   const l=Math.hypot(mx,mz); let moving=false;
   if(l>.1){ if(l>1){mx/=l;mz/=l;} const sn=Math.sin(yaw),cs=Math.cos(yaw);
@@ -1532,10 +1587,10 @@ function updatePlayer(dt,now){
   const gy=groundY(MY.x,MY.z); me.root.position.x=MY.x; me.root.position.z=MY.z; me.root.position.y+=(gy-me.root.position.y)*Math.min(1,dt*10);
   me.root.rotation.y+=angDiff(me.root.rotation.y,MY.yaw)*Math.min(1,dt*12);
   let pose=MY.pose; if(now>MY.poseUntil&&!modalOpen){ MY.pose='idle'; pose='idle'; }
-  animChar(me,pose,moving&&pose==='idle',dt); MY.moving=moving&&pose==='idle';
+  animChar(me,pose,(moving&&pose==='idle')||(autoMove&&pose==='carry'),dt); MY.moving=moving&&pose==='idle';
   // điểm hoạt động gần nhất
   let best=null,bd=1e9; for(const s of SPOTS){ const d=Math.hypot(MY.x-s.x,MY.z-s.z); if(d<s.r&&d<bd){bd=d;best=s;} }
-  if(MY.sit>=0) best=STAND_SPOT; else { const si=nearSeat(); if(si>=0){ const st=SEATS[si]; if(Math.hypot(MY.x-st.x,MY.z-st.z)<bd) best=st.spot; } }
+  if(MY.eat) best=null; else if(MY.sit>=0) best=STAND_SPOT; else { const si=nearSeat(); if(si>=0){ const st=SEATS[si]; if(Math.hypot(MY.x-st.x,MY.z-st.z)<bd) best=st.spot; } }
   if(best!==curSpot){ curSpot=best; const b=$('#act'); if(best){ b.textContent=best.label; b.classList.remove('hidden'); } else b.classList.add('hidden'); tutCheck(); }
 }
 function setPose(p,sec){ MY.pose=p; MY.poseUntil=performance.now()/1000+sec; }
@@ -1648,7 +1703,7 @@ function promote(){
    đứng yên 1 giây và cúi chào, dù đang điều khiển đi hay đang đứng. Mỗi người chỉ chào lại sau 8 giây. */
 const bowAt=new Map();
 function courtesyUpdate(now){
-  if(modalOpen||MY.sit>=0||now<MY.lock||!Net.enabled) return;
+  if(modalOpen||MY.sit>=0||MY.eat||now<MY.lock||!Net.enabled) return;
   const my=D.lvl|0;
   for(const c of remotes){
     if(!c.pid) continue; const p=Net.peers.get(c.pid); if(!p||(p.l|0)<=my) continue;
@@ -1682,7 +1737,7 @@ function openRank(){
   const load=()=>{ const b=$('#lbBox'); if(b) b.innerHTML='<p class="small">Đang tải…</p>'; Net.lb(show); };
   $('#lbx').onclick=()=>closeModal(); $('#lbr').onclick=load; load();
 }
-/* ===== 10d. MANA (SỨC KHỎE) · ĂN Ở NHÀ HÀNG CHAY · TƯƠNG TÁC GIỮA NGƯỜI CHƠI =====
+/* ===== 10d. MANA (SỨC KHỎE) · ĂN Ở NHÀ HÀNG CHAY TỊNH TÂM · TƯƠNG TÁC GIỮA NGƯỜI CHƠI =====
    Mana 0–100 (mặc định 100), lưu trên máy.
    Tiêu hao: đi bộ −1 mana mỗi 10 giây di chuyển · gõ chuông / gõ mõ −10 mana mỗi 10 giây (−1 mỗi giây khi trò chơi đang mở).
    Hồi: ngồi thiền +1 mana mỗi 20 giây · ăn món chay +10–50 mana (ngẫu nhiên mỗi món).
@@ -1704,20 +1759,20 @@ function manaUI(){
     const t=hintTarget(),dx=t.x-MY.x,dz=t.z-MY.z,dist=Math.round(Math.hypot(dx,dz)),f=[-Math.sin(yaw),-Math.cos(yaw)],r=[Math.cos(yaw),-Math.sin(yaw)];
     const ang=Math.atan2(r[0]*dx+r[1]*dz,f[0]*dx+f[1]*dz);
     $('#hArrow').style.transform=`rotate(${ang.toFixed(2)}rad)`;
-    $('#hTxt').textContent=(hungry()?'Đói bụng! Đi ăn ở nhà hàng chay':'Nhà hàng chay')+' · '+dist+' m';
+    $('#hTxt').textContent=(hungry()?'Đói bụng! Đi ăn ở Nhà Hàng Tịnh Tâm':'Nhà Hàng Tịnh Tâm')+' · '+dist+' m';
   }
 }
 function manaUpdate(dt){
   if(!inGame) return;
   if(MY.moving) manaAdd(-.1*dt);                                           // đi bộ: 1 mana mỗi 10 giây
   if(actDrain&&modalOpen){ manaAdd(-1*dt);                                  // gõ chuông / gõ mõ: 10 mana mỗi 10 giây
-    if(D.mana<1){ D.mana=0; manaDirty=true; actDrain=false; closeModal(); toast('😮‍💨 Bạn hết mana rồi! Hãy đi ăn ở Nhà hàng chay (bên phải chùa) hoặc ngồi thiền để hồi sức.'); } }
+    if(D.mana<1){ D.mana=0; manaDirty=true; actDrain=false; closeModal(); toast('😮‍💨 Bạn hết mana rồi! Hãy đi ăn ở Nhà Hàng Chay Tịnh Tâm (bên phải chùa) hoặc ngồi thiền để hồi sức.'); } }
   mUiT+=dt; if(Math.floor(D.mana+1e-6)!==manaShown||mUiT>.4){ mUiT=0; manaUI(); }
   mSaveT+=dt; if(manaDirty&&mSaveT>2){ mSaveT=0; manaDirty=false; Store.save(); }
 }
 function openMana(){
   openModal(`<h2>❤ Mana (sức khỏe)</h2><div class="stat"><div><b>${Math.floor(D.mana+1e-6)}</b>mana hiện có (tối đa 100)</div></div>
-  <div class="rule">• Đi bộ: −1 mana mỗi 10 giây<br>• Gõ chuông / gõ mõ: −10 mana mỗi 10 giây<br>• Ngồi thiền: +1 mana mỗi 20 giây<br>• Ăn ở <b>Nhà hàng chay</b> (bên phải chùa, qua cổng phía đông): +10–50 mana mỗi món, gọi liên tiếp 2 món, chưa đầy mana thì chờ 10 giây<br>• Hết mana: chưa làm được các hoạt động (vẫn ngồi thiền và đi ăn được)<br>
+  <div class="rule">• Đi bộ: −1 mana mỗi 10 giây<br>• Gõ chuông / gõ mõ: −10 mana mỗi 10 giây<br>• Ngồi thiền: +1 mana mỗi 20 giây<br>• Ăn ở <b>Nhà Hàng Chay Tịnh Tâm</b> (bên phải chùa, qua cổng phía đông): gọi món, bê ra bàn ngồi ăn 5 giây rồi +10–50 mana; gọi liên tiếp 2 món, chưa đầy mana thì chờ 10 giây<br>• Hết mana: chưa làm được các hoạt động (vẫn ngồi thiền và đi ăn được)<br>
   <br><b>Tương tác</b> với người chơi khác (ngoài chánh điện, trong 2,4 m):<br>• 🔨 Gõ đầu: bạn −10, người bị gõ −20<br>• 👊 Ký đầu: bạn −15, người bị ký −25<br>• 🦷 Cắn: bạn +1, người bị cắn −10</div>
   <div class="row"><button class="btn alt" id="qtBtn"></button></div><p class="small" id="qtNote"></p>
   <div class="row"><button class="btn" data-closable id="mnx">Đóng</button></div>`);
@@ -1725,11 +1780,15 @@ function openMana(){
   upd(); $('#qtBtn').onclick=()=>{ D.quiet=!D.quiet; Store.save(); Net.quiet(D.quiet); upd(); iaUpdate(1,performance.now()/1000); };
   $('#mnx').onclick=()=>closeModal();
 }
-/* ----- ăn ở nhà hàng chay ----- */
+/* ----- ăn ở Nhà Hàng Chay Tịnh Tâm: gọi món → bê khay ra bàn → ngồi ăn 5 giây → hồi mana -----
+   Mana chỉ tăng SAU khi ăn xong (5 giây thời gian chơi thật, không tính lúc tab bị ẩn). Gọi liên tiếp 2 món (món sau gọi trong vòng 15 giây
+   kể từ lúc ăn xong món trước); ăn xong món thứ 2 mà mana chưa đầy thì phải chờ 10 giây mới gọi tiếp. Khi nhân vật đang bê khay / ngồi ăn
+   thì tự đi (đường đi tránh bàn, quầy, hàng rào) và chưa làm được việc khác. */
+const EAT_SECS=5;
 let eatStreak=0,eatLast=-99,eatLockUntil=0;
 function actEat(){
   const items=MENU.map((m,i)=>`<button class="dish" data-i="${i}"><span class="de">${m[0]}</span>${esc(m[1])}</button>`).join('');
-  openModal(`<h2>🍜 Nhà hàng chay</h2><p class="sub">Chọn món: mỗi món hồi ngẫu nhiên <b>10–50 mana</b>. Gọi liên tiếp được 2 món; chưa đầy mana thì chờ 10 giây mới gọi tiếp.</p><div class="mnrow">Mana: <b id="emn"></b>/100</div><div class="menu" id="menuG">${items}</div><div class="judge" id="eatMsg" style="font-size:15px"></div><div class="row"><button class="btn alt" data-closable id="ex">Xong</button></div>`);
+  openModal(`<h2>🍜 Nhà Hàng Chay Tịnh Tâm</h2><p class="sub">Chọn món, bê ra bàn ngồi ăn <b>${EAT_SECS} giây</b> rồi hồi <b>10–50 mana</b> (ngẫu nhiên). Gọi liên tiếp được 2 món; chưa đầy mana thì chờ 10 giây mới gọi tiếp.</p><div class="mnrow">Mana: <b id="emn"></b>/100</div><div class="menu" id="menuG">${items}</div><div class="judge" id="eatMsg" style="font-size:15px"></div><div class="row"><button class="btn alt" data-closable id="ex">Xong</button></div>`);
   const btns=[...document.querySelectorAll('#menuG .dish')];
   const upd=()=>{ const now=performance.now()/1000,lock=Math.max(0,eatLockUntil-now),full=D.mana>=MANA_MAX-.001;
     $('#emn').textContent=Math.floor(D.mana+1e-6); btns.forEach(b=>b.disabled=lock>0||full);
@@ -1737,14 +1796,76 @@ function actEat(){
   const iv=setInterval(upd,250); upd(); cleanup=()=>clearInterval(iv);
   btns.forEach(b=>b.onclick=()=>eatDish(+b.dataset.i)); $('#ex').onclick=()=>closeModal();
 }
-function eatDish(i){
-  const now=performance.now()/1000; if(now<eatLockUntil||D.mana>=MANA_MAX-.001||!MENU[i]) return;
-  const gain=ri(10,50); manaAdd(gain);
-  if(now-eatLast>15) eatStreak=0; eatLast=now; eatStreak++;
-  if(eatStreak>=2){ eatStreak=0; if(D.mana<MANA_MAX-.001) eatLockUntil=now+10; }          // 2 món liền, chưa đầy mana → nghỉ 10 giây
-  closeModal(); setPose('eat',2.4); lockFor(2.4); flyText('+'+gain+' mana'); Snd.tone(660,.25,.1,'sine'); Snd.tone(990,.35,.07,'sine',.12); manaUI();
-  toast(`${MENU[i][0]} ${MENU[i][1]} ngon quá! +${gain} mana (${Math.floor(D.mana+1e-6)}/100)`);
+/* tìm đường đi bộ trên lưới 0,5 m (tránh bàn, quầy, hàng rào, chậu cây) cho người bê khay */
+let _eg=null;
+function findPath(sx,sz,tx,tz){
+  const X0=26.5,Z0=-14.5,CS=.5,NX=60,NZ=46,R=.42;
+  if(!_eg){ _eg=new Uint8Array(NX*NZ); for(let j=0;j<NZ;j++) for(let i=0;i<NX;i++) _eg[j*NX+i]=isFree(X0+i*CS,Z0+j*CS,R)?0:1; }
+  const cx=x=>clamp(Math.round((x-X0)/CS),0,NX-1),cz=z=>clamp(Math.round((z-Z0)/CS),0,NZ-1),blocked=_eg.slice();
+  const si=cx(sx),sj=cz(sz),ti=cx(tx),tj=cz(tz); blocked[sj*NX+si]=0; blocked[tj*NX+ti]=0;
+  const prev=new Int32Array(NX*NZ).fill(-2),q=[sj*NX+si]; prev[sj*NX+si]=-1; let found=false;
+  for(let h=0;h<q.length&&!found;h++){ const k=q[h],ci=k%NX,cj=(k/NX)|0;
+    for(let dj=-1;dj<=1;dj++) for(let di=-1;di<=1;di++){ if(!di&&!dj) continue; const ni=ci+di,nj=cj+dj; if(ni<0||nj<0||ni>=NX||nj>=NZ) continue; const nk=nj*NX+ni;
+      if(prev[nk]!==-2||blocked[nk]) continue; if(di&&dj&&(blocked[cj*NX+ni]||blocked[nj*NX+ci])) continue;     // không cắt góc vật cản
+      prev[nk]=k; if(nk===tj*NX+ti){ found=true; } q.push(nk); } }
+  if(!found) return null;
+  const cells=[]; for(let k=tj*NX+ti;k>=0;k=prev[k]) cells.push([X0+(k%NX)*CS,Z0+((k/NX)|0)*CS]); cells.reverse();
+  const los=(a,b)=>{ const L=Math.hypot(b[0]-a[0],b[1]-a[1]),n=Math.ceil(L/.2); for(let s=1;s<n;s++){ const t=s/n; if(!isFree(a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t,.34)) return false; } return true; };
+  const out=[]; let i=0; while(i<cells.length-1){ let j=cells.length-1; while(j>i+1&&!los(cells[i],cells[j])) j--; out.push(cells[j]); i=j; }
+  if(out.length) out[out.length-1]=[tx,tz]; else out.push([tx,tz]);
+  return out;
 }
+function eseatFree(i){ const e=ESEATS[i]; if(!e||e.used) return false;
+  for(const a of agents){ if(a.state!=='away'&&Math.hypot(a.x-e.x,a.z-e.z)<1.0) return false; }
+  for(const c of remotes){ if(c.pid&&Math.hypot(c.root.position.x-e.x,c.root.position.z-e.z)<1.0) return false; }
+  return true; }
+function pickEatSeat(){ let bi=-1,bd=1e9; for(let i=0;i<ESEATS.length;i++){ if(!eseatFree(i)) continue; const e=ESEATS[i],d=Math.hypot(e.x-MY.x,e.z-MY.z); if(d<bd){ bd=d; bi=i; } } return bi; }
+function eatDish(i){
+  const now=performance.now()/1000; if(now<eatLockUntil||D.mana>=MANA_MAX-.001||!MENU[i]||MY.eat) return;
+  closeModal(); startMeal(i);
+}
+function mealUI(txt,time){ $('#med').classList.remove('hidden'); $('#medTxt').textContent=txt; $('#medTime').textContent=time; }
+function startMeal(i){
+  const now=performance.now()/1000,m=MENU[i],seat=pickEatSeat(),gain=ri(10,50);
+  if(now-eatLast>15) eatStreak=0;                                       // quá 15 giây kể từ lúc ăn xong món trước: tính lại từ món đầu
+  const E=MY.eat={ph:'walk',dish:i,gain,seat,t:0,eatT:0,route:[]};
+  if(seat>=0){ const e=ESEATS[seat]; e.used=true; e.by='me'; E.route=findPath(MY.x,MY.z,e.x,e.z)||[[e.x,e.z]]; }
+  MY.pose='carry'; MY.poseUntil=Infinity; MY.lock=0; MY.glide=null;
+  mealUI(`🍽 Bê ${m[1]} ra bàn…`,''); Snd.tone(660,.2,.08,'sine');
+  toast(`${m[0]} ${m[1]}: bê ra bàn ngồi ăn nhé…`);
+}
+function sitDown(){
+  const E=MY.eat; E.ph='eat'; E.eatT=0; MY.poseUntil=Infinity;
+  if(E.seat>=0){ const e=ESEATS[E.seat]; MY.glide={x:e.x,z:e.z}; MY.yaw=Math.atan2(e.fx-e.x,e.fz-e.z); MY.pose='eat'; }
+  else MY.pose='carry';                                                  // hết chỗ ngồi: đứng ăn tại quầy
+  Snd.tone(520,.2,.06,'triangle');
+}
+function eatStep(dt){                                                     // trả về true nếu đang tự đi
+  const E=MY.eat; E.t+=dt;
+  if(E.ph==='walk'){
+    const tgt=E.route.length?E.route[0]:(E.seat>=0?[ESEATS[E.seat].x,ESEATS[E.seat].z]:null);
+    if(!tgt||E.t>14){ if(E.seat>=0){ const e=ESEATS[E.seat]; MY.x=e.x; MY.z=e.z; } sitDown(); return false; }   // hết 14 giây: vào chỗ ngay (không bao giờ kẹt)
+    const dx=tgt[0]-MY.x,dz=tgt[1]-MY.z,d=Math.hypot(dx,dz);
+    if(d<.22){ if(E.route.length>1){ E.route.shift(); return true; } if(E.route.length) E.route.shift(); sitDown(); return false; }
+    const sp=Math.min(d,4.6*dt); MY.x+=dx/d*sp; MY.z+=dz/d*sp; MY.yaw=Math.atan2(dx,dz); return true;
+  }
+  E.eatT+=dt; const left=Math.max(0,EAT_SECS-E.eatT),m=MENU[E.dish];
+  mealUI(`${m[0]} Đang ăn ${m[1]}`,Math.ceil(left)+' giây');
+  $('#medRing').style.transform=`scale(${(.7+.35*Math.abs(Math.sin(E.eatT*4))).toFixed(3)})`;
+  if(E.eatT>=EAT_SECS) finishMeal();
+  return false;
+}
+function finishMeal(){
+  const E=MY.eat,m=MENU[E.dish],now=performance.now()/1000;
+  const got=manaAdd(E.gain);                                              // mana CHỈ tăng ở đây, sau khi ăn đủ giây
+  if(E.seat>=0){ ESEATS[E.seat].used=false; ESEATS[E.seat].by=null; }
+  MY.eat=null; MY.glide=null; MY.pose='idle'; MY.poseUntil=0; $('#med').classList.add('hidden');
+  eatStreak++; eatLast=now;
+  if(eatStreak>=2){ eatStreak=0; if(D.mana<MANA_MAX-.001) eatLockUntil=now+10; }          // ăn xong 2 món liền mà chưa đầy mana → nghỉ 10 giây
+  flyText('+'+Math.round(got)+' mana'); Snd.tone(660,.25,.1,'sine'); Snd.tone(990,.35,.07,'sine',.12); manaUI();
+  toast(`${m[0]} ${m[1]} ngon quá! +${Math.round(got)} mana (${Math.floor(D.mana+1e-6)}/100)`);
+}
+
 /* ----- tương tác giữa người chơi (qua máy chủ chùa) ----- */
 const IA={knock:{n:'Gõ đầu',e:'🔨',me:-10,them:-20},thump:{n:'Ký đầu',e:'👊',me:-15,them:-25},bite:{n:'Cắn',e:'🦷',me:1,them:-10}};
 const IA_RANGE=2.4;
@@ -1753,7 +1874,7 @@ function flyAt(x,y,z,txt){ _bv.set(x,y,z).project(camera); if(_bv.z>1) return; c
 function iaUpdate(dt,now){
   iaT+=dt; if(iaT<.2) return; iaT=0;
   let best=null,bd=IA_RANGE;
-  if(inGame&&Net.live&&!D.quiet&&MY.sit<0&&!modalOpen&&!inHall(MY.x,MY.z)){
+  if(inGame&&Net.live&&!D.quiet&&MY.sit<0&&!MY.eat&&!modalOpen&&!inHall(MY.x,MY.z)){
     for(const c of remotes){ if(!c.pid) continue; const p=Net.peers.get(c.pid); if(!p||p.q) continue; const px=c.root.position.x,pz=c.root.position.z; if(inHall(px,pz)) continue; const d=Math.hypot(px-MY.x,pz-MY.z); if(d<bd){ bd=d; best=p; } }
   }
   iaTarget=best; const box=$('#ia'); box.classList.toggle('hidden',!best);
@@ -1785,8 +1906,8 @@ const toastEl=$('#toast'); let toastT=0;
 function toast(s){ toastEl.textContent=s; toastEl.classList.add('show'); clearTimeout(toastT); toastT=setTimeout(()=>toastEl.classList.remove('show'),2600); }
 function shakeScreen(){ const st=$('#stage'); st.classList.remove('shake'); void st.offsetWidth; st.classList.add('shake'); if(navigator.vibrate) navigator.vibrate(70); }
 window.__close=()=>closeModal();
-function runSpot(s){ if(!s||modalOpen) return; if(s.id==='sit'){ startSit(s.seat); return; } if(s.id==='stand'){ standUp(); return; }
-  if(hungry()&&s.id!=='eat'){ toast('🍽 Bạn đói rồi (hết mana): chưa làm được việc này. Hãy đi ăn ở Nhà hàng chay bên phải chùa, hoặc ngồi thiền để hồi mana.'); return; }
+function runSpot(s){ if(!s||modalOpen||MY.eat) return; if(s.id==='sit'){ startSit(s.seat); return; } if(s.id==='stand'){ standUp(); return; }
+  if(hungry()&&s.id!=='eat'){ toast('🍽 Bạn đói rồi (hết mana): chưa làm được việc này. Hãy đi ăn ở Nhà Hàng Chay Tịnh Tâm bên phải chùa, hoặc ngồi thiền để hồi mana.'); return; }
   faceSpot(s); ({incense:actIncense,bell:actBell,mok:actMok,wish:actWish,xam:actXam,eat:actEat})[s.id](); tutDone3(); }
 
 /* 11.1 Thắp hương: chọn 1 hoặc 3 nén, chắp tay, cắm hương, khói bay, đầu nén đỏ cháy dần */
@@ -1959,7 +2080,8 @@ function enterTemple(){
   if(isBad(name)){ $('#werr').textContent='Tên này chưa phù hợp, bạn hãy chọn tên khác nhé.'; return; }
   const sv=$('#srv').value.trim();
   D.name=name; D.robe=robeKey; D.gender=gender; D.hairPick=hairPick; D.hair=resolveHair(); D.online=$('#onl').checked; D.room=$('#room').value.trim().slice(0,16); D.server=sv?Net.norm(sv):''; Store.save();
-  Snd.init(); Snd.resume();                                   // lần chạm này bật âm thanh
+  Snd.init(); Snd.resume(); Snd.hello();                      // lần chạm này bật âm thanh (và đặt kênh phát cho iPhone)
+  setTimeout(()=>{ if(inGame&&!Snd.muted&&!Snd.running) toast('🔇 Chưa có âm thanh: kiểm tra công tắc im lặng bên hông iPhone và âm lượng, rồi chạm màn hình một lần nữa.'); },2200);
   me.tag.set(name,lvTag(D.lvl)); me.setRobe(robeKey); me.setHair(D.hair);
   $('#welcome').classList.add('fade'); setTimeout(()=>$('#welcome').classList.add('hidden'),500);
   $('#hud').classList.remove('hidden'); inGame=true; yaw=0; camPos.set(0,6,28); rankUI();
@@ -1971,9 +2093,9 @@ function enterTemple(){
 }
 $('#enter').onclick=enterTemple; $('#name').addEventListener('keydown',e=>{ if(e.key==='Enter') enterTemple(); });
 $('#bBook').onclick=()=>{ if(!modalOpen) openBook(); }; $('#bRank').onclick=()=>{ if(!modalOpen) openRank(); }; $('#lvline').onclick=()=>{ if(!modalOpen) openRank(); }; $('#lvUp').onclick=promote; $('#manaPill').onclick=()=>{ if(!modalOpen) openMana(); }; $('#bShare').onclick=()=>{ if(!modalOpen) openShare(); };
-$('#bSnd').onclick=()=>{ Snd.init(); Snd.setMuted(!Snd.muted); $('#bSnd').textContent=Snd.muted?'🔇':'🔊'; };
+$('#bSnd').onclick=()=>{ Snd.init(); Snd.setMuted(!Snd.muted); $('#bSnd').textContent=Snd.muted?'🔇':'🔊'; if(!Snd.muted) Snd.hello(); };
 $('#act').addEventListener('click',()=>{ if(curSpot) runSpot(curSpot); });
-$('#eHi').onclick=()=>{ if(!modalOpen&&MY.sit<0){ setPose('pray',2.2); } }; $('#eWave').onclick=()=>{ if(!modalOpen&&MY.sit<0){ setPose('wave',2.2); } };
+$('#eHi').onclick=()=>{ if(!modalOpen&&MY.sit<0&&!MY.eat){ setPose('pray',2.2); } }; $('#eWave').onclick=()=>{ if(!modalOpen&&MY.sit<0&&!MY.eat){ setPose('wave',2.2); } };
 document.addEventListener('visibilitychange',()=>{
   if(document.hidden){ Snd.pause(); touchSeen(); }
   else { const di=applyDecay(); if(di){ rankUI(); if(inGame) feed('⏳ Điểm giảm '+di.pct+'% sau '+di.hours+' giờ vắng mặt'); } if(inGame){ Snd.resume(); Net.wake(); } }
@@ -2033,7 +2155,7 @@ function frame(){
   if(!window.__noRender) renderer.render(scene,camera);
 }
 frame();
-if(qs.has('debug')) window.__game={decayPct,applyDecay,touchSeen,getDecay:()=>decayInfo,feed,wishTags,onWishRemote,onWishSync,wishLayout,tagTarget,WPLACE,REST,ESEATS,MENU,IA,chef,hungry,manaAdd,actEat,eatDish,openMana,iaUpdate,eatState:()=>({eatStreak,eatLockUntil,eatLast}),setEat:(a,b,c)=>{eatStreak=a;eatLockUntil=b;eatLast=c;},LV,D,addPts,promote,rankUI,openRank,wishTags,wishCanvas,accOf,ptsOf,lvOfPts,me,bowAt,setLucky:i=>{luckySeat=i},getLucky:()=>luckySeat,camFocusState:()=>camFocus,SEATS,inHall,startSit,standUp,seatFree,Snd,sim:(sec,dt=.033)=>{for(let t=0;t<sec;t+=dt)update(dt);},keys,MY,agents,Net,SPOTS,COL,inc,runSpot,actBell,actMok,actWish,actXam,actIncense,openBook,openShare,spawnGroup,scene,camera,renderer,get tod(){return tod},setYaw:v=>{yaw=v},setPitch:v=>{pitch=v},setDist:v=>{dist=v},tp:(x,z)=>{MY.x=x;MY.z=z;me.root.position.set(x,0,z);camPos.set(x,6,z+9);},remotes,get ptMats(){return ptMats}};
+if(qs.has('debug')) window.__game={startMeal,eatStep,pickEatSeat,findPath,eseatFree,EAT_SECS,robeMats,ROBES_A,ROBES_E,decayPct,applyDecay,touchSeen,getDecay:()=>decayInfo,feed,wishTags,onWishRemote,onWishSync,wishLayout,tagTarget,WPLACE,REST,ESEATS,MENU,IA,chef,hungry,manaAdd,actEat,eatDish,openMana,iaUpdate,eatState:()=>({eatStreak,eatLockUntil,eatLast}),setEat:(a,b,c)=>{eatStreak=a;eatLockUntil=b;eatLast=c;},LV,D,addPts,promote,rankUI,openRank,wishTags,wishCanvas,accOf,ptsOf,lvOfPts,me,bowAt,setLucky:i=>{luckySeat=i},getLucky:()=>luckySeat,camFocusState:()=>camFocus,SEATS,inHall,startSit,standUp,seatFree,Snd,sim:(sec,dt=.033)=>{for(let t=0;t<sec;t+=dt)update(dt);},keys,MY,agents,Net,SPOTS,COL,inc,runSpot,actBell,actMok,actWish,actXam,actIncense,openBook,openShare,spawnGroup,scene,camera,renderer,get tod(){return tod},setYaw:v=>{yaw=v},setPitch:v=>{pitch=v},setDist:v=>{dist=v},tp:(x,z)=>{MY.x=x;MY.z=z;me.root.position.set(x,0,z);camPos.set(x,6,z+9);},remotes,get ptMats(){return ptMats}};
 </script>
 </body>
 </html>
